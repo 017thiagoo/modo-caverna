@@ -689,6 +689,32 @@
             }
         }
 
+        /* Esconde elementos no PC por padrão */
+        .mobile-only {
+            display: none;
+        }
+
+        /* Mostra no celular e Ajusta a Navegação */
+        @media (max-width: 768px) {
+            .mobile-only {
+                display: block;
+            }
+
+            .mobile-nav {
+                /* Ajuste para baixar os ícones */
+                padding: 10px 20px 15px 20px; 
+                height: 70px; /* Altura fixa para controle */
+                align-items: flex-start; /* Alinha ícones mais ao topo da barra se precisar */
+            }
+        }
+
+        /* Padronização dos Botões de Ação (Adicionar) */
+        .btn-action-padrao {
+            width: 110px !important; /* Largura fixa para todos */
+            margin-bottom: 0 !important;
+            justify-content: center;
+        }
+
     </style>
 </head>
 <body>
@@ -762,7 +788,7 @@
         <div id="dashboard" class="view-section fade-in">
             <div class="grid-container">
                 
-                <div class="card col-12">
+                <div class="card col-12 mobile-only">
                     <div class="card-header">
                         <span class="card-title">
                             <i class="fab fa-youtube" style="color: #ff0000; margin-right: 8px;"></i> 
@@ -770,13 +796,7 @@
                         </span>
                     </div>
                     <div class="video-container">
-                        <iframe 
-                            src="https://www.youtube.com/embed/9Lu9Y36uKtI?start=60&controls=1&modestbranding=1" 
-                            title="Focus Mode" 
-                            frameborder="0" 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                            allowfullscreen>
-                        </iframe>
+                        <iframe src="https://www.youtube.com/embed/9Lu9Y36uKtI?start=60&controls=1&modestbranding=1" title="Focus Mode" frameborder="0" allowfullscreen></iframe>
                     </div>
                 </div>
 
@@ -902,21 +922,19 @@
                 </div>
                 
                 <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
-                    <input type="text" id="task-input" class="form-control" placeholder="Nova tarefa...">
+                    <input type="text" id="task-input" class="form-control" placeholder="Nova tarefa..." style="margin-bottom: 0; flex: 2;">
                     
                     <div style="display: flex; gap: 5px;">
-                        <input type="date" id="task-date" class="form-control">
-                        <button class="btn-calendar" onclick="UI.openCalendar('task-date')">
-                            <i class="fas fa-calendar-alt"></i>
-                        </button>
+                        <input type="date" id="task-date" class="form-control" style="margin-bottom: 0; width: 130px;">
+                        <button class="btn-calendar" onclick="UI.openCalendar('task-date')"><i class="fas fa-calendar-alt"></i></button>
                     </div>
                     
-                    <select id="task-prio" class="form-control">
+                    <select id="task-prio" class="form-control" style="margin-bottom: 0; width: 100px;">
                         <option value="HIGH">Alta</option>
                         <option value="MED">Média</option>
                         <option value="LOW">Baixa</option>
                     </select>
-                    <button class="btn-primary" style="width: auto;" onclick="TaskModule.add()">Push</button>
+                    <button class="btn-primary btn-action-padrao" onclick="TaskModule.add()">Adicionar</button>
                 </div>
 
                 <div id="task-list-container"></div>
@@ -924,7 +942,7 @@
         </div>
 
         <div id="habitos" class="view-section hidden fade-in">
-            <div class="card">
+            <div class="card" style="max-width: 800px; margin: 0 auto;">
                 <div class="card-header" style="justify-content: space-between;">
                     <span class="card-title">Protocolo</span>
                     <select id="habit-view-filter" class="form-control" style="width: auto; height: 30px; padding: 0 10px; font-size: 0.8rem;" onchange="HabitModule.render()">
@@ -944,7 +962,7 @@
                         <option value="Mensal">Mensal</option>
                     </select>
 
-                    <button class="btn-primary" style="width: auto;" onclick="HabitModule.add()">Add</button>
+                    <button class="btn-primary btn-action-padrao" onclick="HabitModule.add()">Adicionar</button>
                 </div>
                 
                 <div id="habit-list-container" class="habit-grid-container"></div>
@@ -964,7 +982,7 @@
                 </div>
 
                 <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                    <input type="text" id="book-input" class="form-control" placeholder="Título do Livro/Curso" style="margin-bottom: 0; flex: 2; min-width: 200px;">
+                    <input type="text" id="book-input" class="form-control" placeholder="Título..." style="margin-bottom: 0; flex: 2; min-width: 200px;">
                     
                     <select id="book-type" class="form-control" style="width: 100px; margin-bottom: 0;">
                         <option value="book">Livro</option>
@@ -977,7 +995,7 @@
                         <option value="Mensal">Mensal</option>
                     </select>
 
-                    <button class="btn-primary" style="width: auto;" onclick="LibraryModule.add()">Salvar</button>
+                    <button class="btn-primary btn-action-padrao" onclick="LibraryModule.add()">Adicionar</button>
                 </div>
                 
                 <div id="library-list-container"></div>
@@ -994,13 +1012,13 @@
             <i class="fas fa-wallet"></i> Banco
         </button>
         <button class="mob-link" onclick="System.navigate('tarefas')">
-            <i class="fas fa-check-square"></i> Tasks
+            <i class="fas fa-check-square"></i> Tarefas
         </button>
         <button class="mob-link" onclick="System.navigate('habitos')">
             <i class="fas fa-fire"></i> Hábitos
         </button>
         <button class="mob-link" onclick="System.navigate('biblioteca')">
-            <i class="fas fa-book"></i> Lib
+            <i class="fas fa-book"></i> Biblio
         </button>
     </nav>
 
