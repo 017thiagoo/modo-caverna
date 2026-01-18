@@ -234,6 +234,7 @@
         .mob-link i { font-size: 1.4rem; margin-bottom: 2px; }
 
         /* --- SUBSTITUA O BLOCO @MEDIA (MOBILE) POR ESTE --- */
+        /* --- SUBSTITUA TODO O BLOCO @MEDIA (MOBILE) POR ESTE --- */
         @media (max-width: 768px) {
             /* Esconde sidebar e widget lateral */
             .sidebar, .youtube-widget { display: none !important; }
@@ -242,12 +243,12 @@
             .mobile-nav { display: flex; }
             .mobile-only { display: block !important; }
 
-            /* Espaçamento do conteúdo principal */
+            /* 1. SAUDAÇÃO MAIS ALTA (Padding reduzido para 2rem) */
             .main-content { 
-                padding: 6rem 1rem 8rem 1rem; 
+                padding: 2rem 1rem 8rem 1rem; 
             }
             
-            .header-title-group h1 { font-size: 1.6rem; }
+            .header-title-group h1 { font-size: 1.5rem; }
             
             /* Grid em coluna única */
             .grid-container { display: flex; flex-direction: column; gap: 1.5rem; }
@@ -260,36 +261,40 @@
                 height: auto;
             }
 
-            /* --- PADRONIZAÇÃO DOS INPUTS (Tarefas, Hábitos, Biblioteca) --- */
+            /* --- PADRONIZAÇÃO TOTAL DOS INPUTS (Tarefas, Financeiro, etc) --- */
             
-            /* 1. Transforma a linha de inputs em uma pilha vertical */
-            #tarefas .input-group-row,
-            #habitos .input-group-row,
-            #biblioteca .input-group-row {
+            /* Força os containers flex a virarem colunas */
+            #tarefas .card-header + div, 
+            #financeiro .btn-group, /* Afeta o grupo Valor/Conta */
+            #habitos .card-header + div,
+            #biblioteca .card-header + div {
+                display: flex !important;
                 flex-direction: column !important;
                 gap: 10px !important;
-                margin-bottom: 15px !important;
+                margin-bottom: 10px !important;
+                align-items: stretch !important;
             }
 
-            /* 2. Força TODOS os campos a ocuparem 100% da largura e terem a mesma altura */
-            .form-control, .btn-primary {
+            /* Exceção: Botões de Saída/Entrada (Financeiro) ficam lado a lado */
+            #financeiro .btns-financeiro {
+                flex-direction: row !important;
+                gap: 10px !important;
+            }
+
+            /* Estilo uniforme para TODOS os campos */
+            .form-control, .btn-primary, .btn-danger, .btn-success {
                 width: 100% !important;
                 margin-bottom: 0 !important; /* O gap do container cuida do espaço */
                 flex: none !important;
-                max-width: none !important;
-                height: 45px !important; /* Altura fixa para ficarem iguais */
+                height: 48px !important; /* Altura generosa para o toque */
+                font-size: 0.9rem !important;
             }
 
-            /* 3. Ajuste específico para o Filtro do Cabeçalho (Botão "Todos") */
-            /* ... dentro de @media (max-width: 768px) ... */
-
-            /* 3. Ajuste específico para o Filtro do Cabeçalho (Botão "Todos") */
-            /* Mudei para WIDTH fixo de 110px para garantir que sejam idênticos */
+            /* Ajuste do Filtro "Todos" no topo dos cards */
             .card-header select {
-                width: 110px !important; 
+                width: auto !important;
+                max-width: 120px !important;
                 height: 35px !important;
-                font-size: 0.8rem !important;
-                flex: none !important; /* Impede de esticar ou encolher */
             }
         }
 
@@ -451,21 +456,32 @@
                     <div class="card-header">
                         <span class="card-title">Registro de Operações</span>
                     </div>
+
                     <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px dashed rgba(255,255,255,0.1);">
-                        <label style="font-size: 0.8rem; color: #888;">Data da Transação:</label>
-                        <input type="date" id="trans-date" class="form-control" style="margin-bottom: 10px;">
-                        <input type="text" id="trans-desc" class="form-control" placeholder="Descrição (ex: Almoço, Freelance)">
+                        
+                        <label style="font-size: 0.8rem; color: #888; display:block; margin-bottom:5px;">Data da Transação:</label>
+                        
+                        <input type="date" id="trans-date" class="form-control">
+                        
+                        <input type="text" id="trans-desc" class="form-control" placeholder="Descrição (ex: Almoço)">
+                        
                         <div class="btn-group" style="margin-bottom: 10px;">
-                            <input type="number" id="trans-val" class="form-control" placeholder="Valor (R$)" style="margin-bottom: 0;">
-                            <select id="trans-account-select" class="form-control" style="margin-bottom: 0;">
+                            <input type="number" id="trans-val" class="form-control" placeholder="Valor (R$)">
+                            <select id="trans-account-select" class="form-control">
                                 <option value="" disabled selected>Selecione a Conta</option>
                             </select>
                         </div>
-                        <div class="btn-group" style="gap: 10px; width: 100%;">
-                            <button class="btn-danger" onclick="FinanceModule.addTransaction('expense')"><i class="fas fa-arrow-down"></i> Saída</button>
-                            <button class="btn-success" onclick="FinanceModule.addTransaction('income')"><i class="fas fa-arrow-up"></i> Entrada</button>
+                        
+                        <div class="btn-group btns-financeiro" style="width: 100%;">
+                            <button class="btn-danger" onclick="FinanceModule.addTransaction('expense')">
+                                <i class="fas fa-arrow-down"></i> Saída
+                            </button>
+                            <button class="btn-success" onclick="FinanceModule.addTransaction('income')">
+                                <i class="fas fa-arrow-up"></i> Entrada
+                            </button>
                         </div>
                     </div>
+
                     <div class="card-header" style="margin-bottom: 10px;">
                         <span class="card-title">Histórico Recente</span>
                     </div>
@@ -486,21 +502,25 @@
                     </select>
                 </div>
                 
-                <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
-                    <input type="text" id="task-input" class="form-control" placeholder="Nova tarefa..." style="margin-bottom: 0; flex: 2;">
-                    <input type="date" id="task-date" class="form-control" style="margin-bottom: 0; width: 130px;">
-                    <select id="task-freq" class="form-control" style="margin-bottom: 0; width: 110px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+                    <input type="text" id="task-input" class="form-control" placeholder="Nova tarefa...">
+                    
+                    <input type="date" id="task-date" class="form-control">
+                    
+                    <select id="task-freq" class="form-control">
                         <option value="Geral">Geral</option>
                         <option value="Diário">Diário</option>
                         <option value="Semanal">Semanal</option>
                         <option value="Mensal">Mensal</option>
                     </select>
-                    <select id="task-prio" class="form-control" style="margin-bottom: 0; width: 100px;">
+
+                    <select id="task-prio" class="form-control">
                         <option value="HIGH">Alta</option>
                         <option value="MED">Média</option>
                         <option value="LOW">Baixa</option>
                     </select>
-                    <button class="btn-primary" style="width: auto;" onclick="TaskModule.add()">Push</button>
+                    
+                    <button class="btn-primary" onclick="TaskModule.add()">Push</button>
                 </div>
 
                 <div id="task-list-container"></div>
