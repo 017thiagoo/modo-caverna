@@ -240,8 +240,11 @@
             .mobile-nav { display: flex; }
             .mobile-only { display: block !important; }
 
-            /* 2. Ajuste de Altura da Saudação */
-            .main-content { padding: 5rem 1rem 8rem 1rem; }
+            /* 2. SAUDAÇÃO NO TOPO (Voltei para 2rem) */
+            .main-content { 
+                padding: 2rem 1rem 8rem 1rem; 
+            }
+            
             .header-title-group h1 { font-size: 1.5rem; }
             
             /* 3. Layout Geral */
@@ -250,22 +253,21 @@
             .card { padding: 1.2rem; }
             .mobile-nav { padding: 10px 20px 10px 20px; height: auto; }
 
-            /* 4. PADRONIZAÇÃO DE INPUTS (AQUI ESTÁ A CORREÇÃO DO ESPAÇAMENTO) */
+            /* 4. ESPAÇAMENTO DOS INPUTS (CORREÇÃO AQUI) */
             
-            /* Organiza as linhas de 'adicionar' em colunas */
             .input-group-row, 
             #financeiro .input-group-row { 
                 flex-direction: column !important;
-                gap: 5px !important; /* Gap menor entre itens agrupados */
+                gap: 0 !important; /* Deixe o margin controlar o espaço */
                 margin-bottom: 15px !important;
             }
 
-            /* Estilo dos Campos: AQUI MUDEI O MARGIN-BOTTOM PARA 10px */
+            /* Força espaço embaixo de CADA campo */
             .form-control, 
             .btn-primary, 
             input[type="date"] {
                 width: 100% !important;
-                margin-bottom: 12px !important; /* ESPAÇO ENTRE OS CAMPOS NO BANCO */
+                margin-bottom: 12px !important; /* <--- ISSO DESGRUDA OS CAMPOS */
                 flex: none !important;
                 height: 45px !important;
                 line-height: 45px;
@@ -274,7 +276,7 @@
                 box-sizing: border-box !important;
             }
             
-            /* Remove margem extra do último item dentro de grupos para não ficar buraco */
+            /* Remove margem do último item para não sobrar espaço */
             .input-group-row .form-control:last-child,
             .input-group-row .btn-primary {
                 margin-bottom: 0 !important;
@@ -283,14 +285,14 @@
             /* Botão Push/Adicionar centralizado */
             .btn-primary { justify-content: center !important; }
 
-            /* Reset nativo de data iOS */
+            /* Reset data iOS */
             input[type="date"] {
                 -webkit-appearance: none;
                 appearance: none;
                 display: block;
             }
 
-            /* Botões Financeiros (Lado a Lado) */
+            /* Botões Financeiros (Lado a Lado e Menores) */
             .btns-financeiro {
                 flex-direction: row !important;
                 gap: 10px !important;
@@ -298,7 +300,7 @@
             }
             .btns-financeiro button {
                 width: 100% !important;
-                height: 40px !important; /* Altura ajustada */
+                height: 40px !important;
                 margin-bottom: 0 !important;
                 display: flex; align-items: center; justify-content: center;
             }
@@ -308,7 +310,7 @@
                 width: 100px !important;
                 height: 35px !important;
                 font-size: 0.8rem !important;
-                margin-bottom: 0 !important; /* Não precisa de margem no header */
+                margin-bottom: 0 !important;
             }
         }
         
