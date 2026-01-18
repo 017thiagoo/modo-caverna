@@ -235,96 +235,95 @@
 
         /* --- SUBSTITUA O BLOCO @MEDIA (MOBILE) POR ESTE --- */
         @media (max-width: 768px) {
-            /* Esconde sidebar e widget lateral */
+            /* 1. Esconde coisas de PC */
             .sidebar, .youtube-widget { display: none !important; }
-            
-            /* Mostra navegação e elementos mobile */
             .mobile-nav { display: flex; }
             .mobile-only { display: block !important; }
 
-            /* 1. SAUDAÇÃO (Ajuste fino: 2.8rem sobe um pouco) */
-            .main-content { 
-                padding: 2.8rem 1rem 8rem 1rem; 
-            }
-            
+            /* 2. Ajuste de Altura da Saudação */
+            .main-content { padding: 5rem 1rem 8rem 1rem; }
             .header-title-group h1 { font-size: 1.5rem; }
             
-            /* Grid em coluna única */
+            /* 3. Layout Geral */
             .grid-container { display: flex; flex-direction: column; gap: 1.5rem; }
             .col-4, .col-6, .col-8, .col-12 { width: 100%; }
             .card { padding: 1.2rem; }
+            .mobile-nav { padding: 10px 20px 10px 20px; height: auto; }
 
-            /* Navegação Inferior */
-            .mobile-nav {
-                padding: 10px 20px 10px 20px;
-                height: auto;
-            }
-
-            /* --- PADRONIZAÇÃO DE INPUTS --- */
+            /* 4. PADRONIZAÇÃO DE INPUTS (AQUI ESTÁ A CORREÇÃO DO ESPAÇAMENTO) */
+            
+            /* Organiza as linhas de 'adicionar' em colunas */
             .input-group-row, 
             #financeiro .input-group-row { 
                 flex-direction: column !important;
-                gap: 10px !important;
+                gap: 5px !important; /* Gap menor entre itens agrupados */
                 margin-bottom: 15px !important;
             }
 
-            /* Campos Gerais (Tarefas, Hábitos, Inputs do Banco) */
+            /* Estilo dos Campos: AQUI MUDEI O MARGIN-BOTTOM PARA 10px */
             .form-control, 
             .btn-primary, 
             input[type="date"] {
                 width: 100% !important;
-                margin-bottom: 0 !important;
+                margin-bottom: 12px !important; /* ESPAÇO ENTRE OS CAMPOS NO BANCO */
                 flex: none !important;
-                height: 42px !important; /* Altura padrão confortável */
-                line-height: 42px;
+                height: 45px !important;
+                line-height: 45px;
                 font-size: 0.9rem !important;
                 padding: 0 12px !important;
                 box-sizing: border-box !important;
             }
             
-            /* Botão "Adicionar" (Push) */
-            .btn-primary {
-                justify-content: center !important;
+            /* Remove margem extra do último item dentro de grupos para não ficar buraco */
+            .input-group-row .form-control:last-child,
+            .input-group-row .btn-primary {
+                margin-bottom: 0 !important;
             }
 
-            /* Ajuste específico para resetar estilo nativo de data no iOS */
+            /* Botão Push/Adicionar centralizado */
+            .btn-primary { justify-content: center !important; }
+
+            /* Reset nativo de data iOS */
             input[type="date"] {
                 -webkit-appearance: none;
                 appearance: none;
                 display: block;
             }
 
-            /* --- AJUSTE ESPECÍFICO FINANCEIRO --- */
+            /* Botões Financeiros (Lado a Lado) */
             .btns-financeiro {
                 flex-direction: row !important;
                 gap: 10px !important;
+                margin-top: 5px;
             }
-
-            /* 2. BOTÕES DE SAÍDA/ENTRADA MENORES */
             .btns-financeiro button {
                 width: 100% !important;
-                height: 38px !important; /* Reduzi de 42px para 38px */
-                font-size: 0.85rem !important;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                height: 40px !important; /* Altura ajustada */
                 margin-bottom: 0 !important;
+                display: flex; align-items: center; justify-content: center;
             }
 
-            /* Filtro "Todos" no Mobile (Mantém o que já estava bom) */
+            /* Filtro "Todos" no Mobile */
             .card-header select {
                 width: 100px !important;
                 height: 35px !important;
                 font-size: 0.8rem !important;
+                margin-bottom: 0 !important; /* Não precisa de margem no header */
             }
         }
         
         /* --- AJUSTE DESKTOP (PC) --- */
         /* Garante que o filtro "Todos" tenha o mesmo tamanho em todas as abas no PC */
+        /* --- ADICIONE NO FINAL DO CSS (PARA O PC) --- */
         @media (min-width: 769px) {
-            .card-header select {
-                width: 130px; /* Largura fixa para alinhar Tarefas, Hábitos e Lib */
+            /* Força os filtros (Todos/Diário...) a terem largura fixa no PC */
+            #task-view-filter, 
+            #habit-view-filter, 
+            #lib-view-filter {
+                width: 140px !important;
                 text-align: center;
+                text-align-last: center; /* Para navegadores mais recentes */
+                cursor: pointer;
             }
         }
 
