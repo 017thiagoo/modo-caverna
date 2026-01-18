@@ -242,12 +242,12 @@
             .mobile-nav { display: flex; }
             .mobile-only { display: block !important; }
 
-            /* 1. SAUDAÇÃO AJUSTADA (5rem é o ponto ideal) */
+            /* 1. SAUDAÇÃO MAIS ALTA (Reduzi para 3.5rem) */
             .main-content { 
-                padding: 5rem 1rem 8rem 1rem; 
+                padding: 3.5rem 1rem 8rem 1rem; 
             }
             
-            .header-title-group h1 { font-size: 1.6rem; }
+            .header-title-group h1 { font-size: 1.5rem; }
             
             /* Grid em coluna única */
             .grid-container { display: flex; flex-direction: column; gap: 1.5rem; }
@@ -260,36 +260,50 @@
                 height: auto;
             }
 
-            /* --- CORREÇÃO DOS INPUTS E BOTÕES (Tarefas, Banco, etc) --- */
-            
-            /* Força os containers de linha a virarem coluna no celular */
-            .input-group-row { 
+            /* --- PADRONIZAÇÃO DE INPUTS E FILTROS --- */
+
+            /* 2. FILTRO 'TODOS' (Largura Igual em todas as abas) */
+            .card-header select {
+                width: 100px !important; /* Largura fixa para alinhar Biblio/Tarefas/Habitos */
+                height: 35px !important;
+                font-size: 0.8rem !important;
+            }
+
+            /* Container de inputs em coluna */
+            .input-group-row, 
+            #financeiro .input-group-row { 
                 flex-direction: column !important;
                 gap: 10px !important;
                 margin-bottom: 15px !important;
             }
 
-            /* Garante que inputs e selects ocupem a linha toda */
-            .input-group-row input, 
-            .input-group-row select, 
-            .input-group-row button {
+            /* 3. CAMPOS PADRONIZADOS (Data igual aos outros) */
+            .form-control, 
+            .btn-primary, 
+            .btn-danger, 
+            .btn-success,
+            input[type="date"] {
                 width: 100% !important;
-                margin: 0 !important; /* O gap controla o espaço */
+                margin-bottom: 0 !important;
                 flex: none !important;
-                height: 48px !important; /* Altura boa para o dedo */
+                height: 42px !important; /* Altura padronizada e compacta */
+                line-height: 42px; /* Centraliza texto verticalmente */
+                font-size: 0.9rem !important;
+                padding: 0 12px !important; /* Padding lateral igual */
+                box-sizing: border-box !important;
+            }
+            
+            /* Ajuste específico para resetar estilo nativo de data no iOS */
+            input[type="date"] {
+                -webkit-appearance: none;
+                appearance: none;
+                display: block;
             }
 
-            /* Exceção: Botões de Saída/Entrada (Financeiro) ficam lado a lado */
+            /* Botões Financeiros lado a lado */
             .btns-financeiro {
                 flex-direction: row !important;
                 gap: 10px !important;
-            }
-            
-            /* Ajuste do botão de filtro no topo */
-            .card-header select {
-                width: auto !important;
-                max-width: 110px !important;
-                height: 35px !important;
             }
         }
 
