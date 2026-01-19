@@ -1129,26 +1129,21 @@
             }
         };
 
-        // --- 4. TASK MODULE (COM HORA) ---
+        // --- 4. TASK MODULE (COM INTEGRAÇÃO AO CALENDÁRIO) ---
         const TaskModule = {
             add() {
                 const desc = document.getElementById('task-input').value;
                 const date = document.getElementById('task-date').value;
-                const time = document.getElementById('task-time').value; // Captura a Hora
+                const time = document.getElementById('task-time').value;
                 const prio = document.getElementById('task-prio').value;
                 const freq = document.getElementById('task-freq').value;
 
                 if (desc) {
                     DB.state.tasks.push({ 
-                        desc, 
-                        date, 
-                        time, // Salva a Hora
-                        prio, 
-                        freq, 
-                        done: false 
+                        desc, date, time, prio, freq, done: false 
                     });
                     document.getElementById('task-input').value = '';
-                    // Não limpamos data/hora para facilitar inserção em sequência
+                    // Mantém a data/hora para facilitar inserções seguidas
                     DB.save();
                 }
             },
@@ -1162,6 +1157,46 @@
                 DB.state.tasks.splice(index, 1);
                 DB.save();
             },
+
+            // --- NOVA FUNÇÃO: GERA O ALARME NA AGENDA DO CELULAR ---
+            exportToCalendar(index) {
+                const t = DB.state.tasks[index];
+                if (!t.date || !t.time) {
+                    return alert("Para agendar, a tarefa precisa de Data e Hora!");
+                }
+
+                // Formata data e hora para o padrão universal de calendário (YYYYMMDDTHHmmss)
+                const start = t.date.replace(/-/g, '') + 'T' + t.time.replace(/:/g, '') + '00';
+                
+                // Cria um evento de 1 hora de duração
+                // Calcula hora final (simples) ou usa a mesma hora
+                const end = start; 
+
+                const icsContent = [
+                    'BEGIN:VCALENDAR',
+                    'VERSION:2.0',
+                    'BEGIN:VEVENT',
+                    `DTSTART:${start}`,
+                    `DTEND:${end}`,
+                    `SUMMARY:Modo Caverna: ${t.desc}`,
+                    `DESCRIPTION:Prioridade: ${t.prio} | Foco total na execução.`,
+                    'BEGIN:VALARM', // Configura o alarme para tocar na hora
+                    'TRIGGER:-PT0M',
+                    'ACTION:DISPLAY',
+                    'DESCRIPTION:Reminder',
+                    'END:VALARM',
+                    'END:VEVENT',
+                    'END:VCALENDAR'
+                ].join('\n');
+
+                const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.setAttribute('download', 'tarefa_caverna.ics');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
             
             render() {
                 const list = document.getElementById('task-list-container');
@@ -1169,11 +1204,9 @@
                 
                 list.innerHTML = '';
                 
-                // Ordenação inteligente: Primeiro por Prioridade, depois por Hora
                 const sortedTasks = [...DB.state.tasks].sort((a, b) => {
                     const pWeight = { 'HIGH': 3, 'MED': 2, 'LOW': 1 };
                     if (pWeight[b.prio] !== pWeight[a.prio]) return pWeight[b.prio] - pWeight[a.prio];
-                    // Se prioridade for igual, quem tem hora marcada vem antes
                     if (a.time && !b.time) return -1;
                     if (!a.time && b.time) return 1;
                     if (a.time && b.time) return a.time.localeCompare(b.time);
@@ -1181,18 +1214,19 @@
                 });
 
                 sortedTasks.forEach((t) => {
-                    // Precisamos encontrar o índice original para o toggle/delete funcionar na lista ordenada
                     const originalIndex = DB.state.tasks.indexOf(t);
-                    
                     const tarefaFreq = t.freq || 'Geral';
                     if (filter !== 'all' && tarefaFreq !== filter) return;
 
                     const prioClass = t.prio === 'HIGH' ? 'p-high' : (t.prio === 'MED' ? 'p-med' : 'p-low');
                     const doneStyle = t.done ? 'text-decoration: line-through; opacity: 0.5;' : '';
                     const icon = t.done ? 'fa-check-square' : 'fa-square';
-                    
-                    // Formatação da Hora (Se existir)
                     const timeDisplay = t.time ? `<i class="far fa-clock" style="margin-left:5px; font-size:0.7rem;"></i> ${t.time}` : '';
+
+                    // Botão de Agenda só aparece se tiver Data e Hora
+                    const calendarBtn = (t.date && t.time && !t.done) 
+                        ? `<button onclick="TaskModule.exportToCalendar(${originalIndex})" style="background:none; border:none; color:var(--color-primary); cursor:pointer; margin-top:5px; margin-right:8px;" title="Adicionar ao Alarme do Celular"><i class="fas fa-calendar-plus"></i></button>` 
+                        : '';
 
                     list.innerHTML += `
                         <div class="task-item fade-in">
@@ -1209,7 +1243,11 @@
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; min-width:60px;">
                                 <small class="mono" style="color:#666; font-size:0.7rem; white-space:nowrap;">${t.date}</small>
                                 <small class="mono" style="color:var(--color-primary); font-size:0.75rem; white-space:nowrap; font-weight:bold;">${timeDisplay}</small>
-                                <button onclick="TaskModule.delete(${originalIndex})" style="background:none; border:none; color:#444; cursor:pointer; margin-top:5px;"><i class="fas fa-trash"></i></button>
+                                
+                                <div style="display:flex;">
+                                    ${calendarBtn}
+                                    <button onclick="TaskModule.delete(${originalIndex})" style="background:none; border:none; color:#444; cursor:pointer; margin-top:5px;"><i class="fas fa-trash"></i></button>
+                                </div>
                             </div>
                         </div>
                     `;
