@@ -398,11 +398,41 @@
             color: #444;
         }
 
+        /* =========================================
+        AJUSTES FINAIS DE TAMANHO (TOUCH)
+        ========================================= */
+
+        /* 1. Aumentar as bolinhas dos Hábitos */
+        .day-check {
+            width: 36px;  /* Aumentado de 24px para 36px */
+            height: 36px;
+            border-radius: 8px;
+            border-width: 2px; /* Borda mais grossa para ver melhor */
+        }
+
+        /* 2. Aumentar o "Check" (Quadrado) das Tarefas e (Bolinha) da Biblioteca */
+        .task-item i.fa-square, 
+        .task-item i.fa-check-square,
+        .task-item i.fa-circle, 
+        .task-item i.fa-check-circle {
+            font-size: 1.8rem !important; /* Bem maior */
+            margin-right: 15px !important;
+            padding: 5px; /* Aumenta a área de toque do dedo */
+        }
+
+        /* 3. Aumentar Lixeira e Calendário */
+        .task-item button {
+            padding: 10px 12px !important; /* Área de toque generosa */
+            margin-top: 2px !important;
+        }
+
+        .task-item button i {
+            font-size: 1.4rem !important; /* Ícone grande e visível */
+        }
+
     </style>
 </head>
 <body>
-
-    <audio id="notification-sound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" preload="auto"></audio>
 
     <aside class="sidebar">
         <div class="brand-container">
@@ -739,94 +769,6 @@
          * Architecture: State-Based Single Page Application (SPA)
          */
 
-        // --- 0. NOTIFICATION MODULE ---
-        const NotificationModule = {
-            permission: false,
-
-            async init() {
-                if ("Notification" in window) {
-                    // Se já tem permissão, apenas marca como true
-                    if (Notification.permission === 'granted') {
-                        this.permission = true;
-                        return;
-                    }
-                    // Se não tem, pede (requer clique do usuário)
-                    const result = await Notification.requestPermission();
-                    this.permission = result === 'granted';
-                    
-                    if (this.permission) {
-                        this.send("Sistema Ativado", "As notificações estão funcionando.");
-                    }
-                }
-            },
-
-            // Função para você testar manualmente se o som sai
-            test() {
-                this.playSound();
-                alert("Teste de som executado. Se não ouviu, verifique o volume.");
-                this.init(); // Aproveita para pedir permissão se não tiver
-            },
-
-            playSound() {
-                const audio = document.getElementById('notification-sound');
-                if (audio) {
-                    audio.volume = 1.0; // Volume máximo
-                    // Tenta tocar. Se der erro, é porque o navegador bloqueou
-                    audio.play().catch(e => console.warn("Som bloqueado. Interaja com a página.", e));
-                }
-            },
-
-            send(title, body) {
-                // Toca o som sempre (mesmo se a notificação visual falhar)
-                this.playSound();
-
-                if (this.permission) {
-                    // Notificação Visual do Sistema (Windows/Android/iOS)
-                    try {
-                        new Notification(title, {
-                            body: body,
-                            icon: 'favicon.png',
-                            vibrate: [200, 100, 200], // Vibração
-                            requireInteraction: true // Mantém na tela até clicar (Desktop)
-                        });
-                    } catch (e) {
-                        console.log("Erro na notificação nativa");
-                    }
-                } else {
-                    // Fallback: Se não permitiu notificação, usa um Alert antigo mas funcional
-                    // Mas usamos setTimeout para não travar o script
-                    setTimeout(() => alert(`⏰ ALARME: ${title}\n${body}`), 100);
-                }
-            },
-
-            checkAlarms() {
-                const now = new Date();
-                const today = now.toISOString().split('T')[0];
-                
-                const currentHour = String(now.getHours()).padStart(2, '0');
-                const currentMin = String(now.getMinutes()).padStart(2, '0');
-                const currentTime = `${currentHour}:${currentMin}`;
-
-                // Procura tarefa: Data igual, Hora igual e NÃO feita
-                // Usamos um flag 'notified' para não tocar 10x no mesmo minuto
-                const alarmTask = DB.state.tasks.find(t => 
-                    t.date === today && 
-                    t.time === currentTime && 
-                    !t.done &&
-                    !t.notified // Evita repetição no mesmo minuto
-                );
-
-                if (alarmTask) {
-                    this.send(
-                        `HORA DE EXECUTAR!`,
-                        `Tarefa: ${alarmTask.desc}\nPrioridade: ${alarmTask.prio}`
-                    );
-                    // Marca como notificado na memória (não no banco) para não repetir agora
-                    alarmTask.notified = true; 
-                }
-            }
-        };
-
         // --- 1. STATE MANAGEMENT ---
         const DB = {
             key: 'caverna_os_v6',
@@ -854,22 +796,6 @@
                 this.updateGreeting();
                 FinanceModule.init();
                 this.refreshAll();
-
-                // TRUQUE DO PRIMEIRO CLIQUE:
-                // O navegador só libera som se você clicar na página.
-                // Adicionamos um "ouvinte" no corpo inteiro do site.
-                // No seu primeiro toque em qualquer lugar, ele ativa o som e pede permissão.
-                document.body.addEventListener('click', async () => {
-                    await NotificationModule.init();
-                    // Toca um som mudo ou baixinho só para "destravar" o áudio do navegador
-                    const audio = document.getElementById('notification-sound');
-                    if(audio) { audio.volume = 0.1; audio.play().catch(()=>{}); }
-                }, { once: true }); // "once: true" significa que só roda na primeira vez
-
-                // Loop de verificação: A cada 5 SEGUNDOS (muito mais preciso)
-                setInterval(() => {
-                    NotificationModule.checkAlarms();
-                }, 5000);
             },
 
             updateGreeting() {
