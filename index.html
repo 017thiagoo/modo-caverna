@@ -628,12 +628,18 @@
                     </div>
 
                     <div id="fixed-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
-                        <div class="input-group-row" style="display:flex; gap:10px;">
+    
+                        <div class="input-group-row" style="display:flex; gap:10px; margin-bottom: 10px;">
                             <input type="text" id="fixed-name" class="form-control" placeholder="Nome (ex: Internet)" style="margin-bottom:0;">
                             <input type="number" id="fixed-val" class="form-control" placeholder="Valor (R$)" style="margin-bottom:0;">
-                            <input type="number" id="fixed-day" class="form-control" placeholder="Dia Venc." min="1" max="31" style="margin-bottom:0; width: 100px;">
-                            <button class="btn-primary" onclick="FixedExpensesModule.add()" style="width: auto;">Salvar</button>
                         </div>
+
+                        <div class="date-time-wrapper">
+                            <input type="date" id="fixed-date" class="form-control">
+                            <input type="time" id="fixed-time" class="form-control">
+                        </div>
+
+                        <button class="btn-primary" onclick="FixedExpensesModule.add()" style="width: 100%;">Salvar Conta</button>
                     </div>
 
                     <div style="margin-bottom: 15px;">
@@ -829,15 +835,11 @@
             }
         };
 
-        /* --- ADICIONE ISTO LOGO APÓS O BLOCO "const DB" --- */
-        
+        /* --- COLE ISSO LOGO APÓS O "const DB" --- */
         const UI = {
             toggle(elementId) {
                 const el = document.getElementById(elementId);
-                if (el) {
-                    // Se tiver a classe 'hidden', tira. Se não tiver, coloca.
-                    el.classList.toggle('hidden');
-                }
+                if (el) el.classList.toggle('hidden');
             }
         };
 
@@ -1108,26 +1110,37 @@
             }
         };
 
-        // --- MÓDULO DE GASTOS FIXOS ---
+        // --- MÓDULO DE GASTOS FIXOS (CORRIGIDO E COM CALENDÁRIO) ---
         const FixedExpensesModule = {
             add() {
+                // Captura os valores pelos IDs corretos
                 const name = document.getElementById('fixed-name').value;
                 const val = parseFloat(document.getElementById('fixed-val').value);
-                const day = document.getElementById('fixed-day').value;
+                const date = document.getElementById('fixed-date').value;
+                const time = document.getElementById('fixed-time').value;
 
-                if (name && !isNaN(val) && day) {
+                // Validação: Só salva se tiver Nome e Valor (Data/Hora opcional, mas recomendada)
+                if (name && !isNaN(val)) {
                     DB.state.fixed.push({
                         id: Date.now(),
                         name,
                         val,
-                        day,
-                        paid: false // Começa como não pago
+                        date, // Salva a data real
+                        time, // Salva a hora real
+                        paid: false
                     });
+
                     // Limpa os campos
                     document.getElementById('fixed-name').value = '';
                     document.getElementById('fixed-val').value = '';
-                    document.getElementById('fixed-day').value = '';
-                    DB.save();
+                    // Não limpamos data/hora para facilitar inserções repetidas
+                    
+                    DB.save(); // Salva e atualiza a tela
+                    
+                    // Fecha o formulário automaticamente após salvar
+                    UI.toggle('fixed-add-form');
+                } else {
+                    alert("Por favor, preencha o Nome e o Valor.");
                 }
             },
 
@@ -1135,53 +1148,64 @@
                 const expense = DB.state.fixed.find(e => e.id === id);
                 if (expense) {
                     expense.paid = !expense.paid;
-                    
-                    // Opcional: Se marcou como pago, perguntar se quer lançar na transação
-                    if (expense.paid && confirm(`Lançar "Pagamento ${expense.name}" como saída no histórico?`)) {
-                        const today = new Date().toISOString().split('T')[0];
-                        // Pega a primeira conta bancária como padrão (ou deixe o usuário escolher depois)
-                        const defaultBank = DB.state.banks[0] ? DB.state.banks[0].name : "Caixa"; 
-                        
-                        DB.state.transactions.unshift({
-                            id: Date.now(),
-                            date: today.split('-').reverse().join('/'),
-                            desc: `Pgto. ${expense.name}`,
-                            val: expense.val,
-                            type: 'expense',
-                            accName: defaultBank 
-                        });
-                        
-                        // Atualiza o saldo do banco também se tiver
-                        if(DB.state.banks[0]) DB.state.banks[0].balance -= expense.val;
-                    }
-                    
                     DB.save();
                 }
             },
 
             delete(id) {
-                if(confirm("Remover esta conta fixa?")) {
+                if(confirm("Remover esta conta?")) {
                     DB.state.fixed = DB.state.fixed.filter(e => e.id !== id);
                     DB.save();
                 }
             },
 
-            // Função para resetar tudo dia 01 do mês (chamar manualmente ou automático)
-            resetMonth() {
-                if(confirm("Reiniciar todas as contas para 'Não Pago' (Novo Mês)?")) {
-                    DB.state.fixed.forEach(e => e.paid = false);
-                    DB.save();
+            // --- FUNÇÃO DE EXPORTAR PARA CALENDÁRIO (IGUAL TAREFAS) ---
+            exportToCalendar(id) {
+                const t = DB.state.fixed.find(e => e.id === id);
+                if (!t || !t.date || !t.time) {
+                    return alert("Defina Data e Hora para agendar!");
                 }
+
+                const start = t.date.replace(/-/g, '') + 'T' + t.time.replace(/:/g, '') + '00';
+                const end = start;
+
+                const icsContent = [
+                    'BEGIN:VCALENDAR',
+                    'VERSION:2.0',
+                    'BEGIN:VEVENT',
+                    `DTSTART:${start}`,
+                    `DTEND:${end}`,
+                    `SUMMARY:Pagar Conta: ${t.name}`,
+                    `DESCRIPTION:Valor: R$ ${t.val.toFixed(2)}`,
+                    'BEGIN:VALARM',
+                    'TRIGGER:-PT0M',
+                    'ACTION:DISPLAY',
+                    'DESCRIPTION:Lembrete de Pagamento',
+                    'END:VALARM',
+                    'END:VEVENT',
+                    'END:VCALENDAR'
+                ].join('\n');
+
+                const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.setAttribute('download', `pagar_${t.name}.ics`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             },
 
             render() {
                 const list = document.getElementById('fixed-list-container');
-                if (!list) return; // Segurança caso a aba não esteja aberta
+                if (!list) return;
 
                 list.innerHTML = '';
                 
-                // Ordena por dia de vencimento
-                const sorted = [...DB.state.fixed].sort((a, b) => a.day - b.day);
+                // Ordena por Data
+                const sorted = [...DB.state.fixed].sort((a, b) => {
+                    if (a.date && b.date) return a.date.localeCompare(b.date);
+                    return 0;
+                });
                 
                 let totalVal = 0;
                 let paidVal = 0;
@@ -1194,17 +1218,33 @@
                     const statusIcon = e.paid ? 'fa-check-circle' : 'fa-circle';
                     const opacity = e.paid ? '0.5' : '1';
                     
+                    // Verifica se tem data/hora para mostrar o botão de calendário
+                    const calendarBtn = (e.date && e.time && !e.paid) 
+                        ? `<button onclick="FixedExpensesModule.exportToCalendar(${e.id})" style="background:none; border:none; color:#fff; cursor:pointer;" title="Agendar"><i class="fas fa-calendar-plus"></i></button>` 
+                        : '';
+                    
+                    // Formata Data/Hora para exibir
+                    const dateTimeDisplay = (e.date) 
+                        ? `<small style="color:#888; display:block;">Venc: ${e.date.split('-').reverse().join('/')} ${e.time ? 'às '+e.time : ''}</small>` 
+                        : '<small style="color:#888;">Sem data</small>';
+
                     list.innerHTML += `
-                        <div class="habit-card-mini fade-in" style="opacity: ${opacity}; border-left: 3px solid ${statusColor};">
+                        <div class="habit-card-mini fade-in" style="opacity: ${opacity}; border-left: 3px solid ${statusColor}; padding: 15px;">
                             <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="display:flex; align-items:center; gap:10px;">
-                                    <i class="far ${statusIcon}" onclick="FixedExpensesModule.toggle(${e.id})" style="color:${statusColor}; cursor:pointer; font-size:1.2rem;"></i>
+                                
+                                <div style="display:flex; align-items:center; gap:15px;">
+                                    <i class="far ${statusIcon}" onclick="FixedExpensesModule.toggle(${e.id})" style="color:${statusColor}; cursor:pointer; font-size:1.5rem;"></i>
                                     <div>
-                                        <span style="font-weight:600; display:block;">${e.name}</span>
-                                        <small style="color:#888;">Dia ${e.day} • R$ ${e.val.toFixed(2)}</small>
+                                        <span style="font-weight:600; display:block; font-size:1rem;">${e.name}</span>
+                                        <span style="color:${statusColor}; font-weight:bold;">R$ ${e.val.toFixed(2)}</span>
+                                        ${dateTimeDisplay}
                                     </div>
                                 </div>
-                                <i class="fas fa-trash" onclick="FixedExpensesModule.delete(${e.id})" style="cursor:pointer; color:#444;"></i>
+
+                                <div style="display:flex; gap:15px; align-items:center;">
+                                    ${calendarBtn}
+                                    <i class="fas fa-trash" onclick="FixedExpensesModule.delete(${e.id})" style="cursor:pointer; color:#666; font-size:1.1rem;"></i>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -1212,8 +1252,11 @@
 
                 // Atualiza Barra de Progresso
                 const percent = totalVal > 0 ? (paidVal / totalVal) * 100 : 0;
-                document.getElementById('fixed-progress-bar').style.width = `${percent}%`;
-                document.getElementById('fixed-progress-text').innerText = `${percent.toFixed(0)}% Pago (R$ ${paidVal} / R$ ${totalVal})`;
+                const bar = document.getElementById('fixed-progress-bar');
+                const text = document.getElementById('fixed-progress-text');
+                
+                if(bar) bar.style.width = `${percent}%`;
+                if(text) text.innerText = `${percent.toFixed(0)}% Pago (R$ ${paidVal.toFixed(0)} / R$ ${totalVal.toFixed(0)})`;
 
                 if(list.innerHTML === '') {
                     list.innerHTML = '<div class="empty-state">Nenhum gasto fixo cadastrado.</div>';
