@@ -715,42 +715,43 @@
                 <div class="card col-12">
                     <div class="card-header">
                         <span class="card-title">
-                            <i class="fas fa-hand-holding-usd" style="margin-right:8px; color:var(--color-success)"></i> 
-                            Entradas Fixas (Receita)
+                            <i class="fas fa-file-invoice-dollar" style="margin-right:8px; color:var(--color-warning)"></i> 
+                            Gastos Fixos Mensais
                         </span>
-                        <button class="card-action-btn" onclick="UI.toggle('inc-add-form')">+ Nova Entrada</button>
+                        <button class="card-action-btn" onclick="UI.toggle('fixed-add-form')">+ Nova Conta</button>
                     </div>
 
                     <div id="inc-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
+                
                         <div class="input-group-row" style="display:flex; gap:10px; margin-bottom: 10px;">
                             <input type="text" id="inc-name" class="form-control" placeholder="Descrição (ex: Salário)" style="margin-bottom:0; flex:2;">
                             <input type="number" id="inc-val" class="form-control" placeholder="Valor (R$)" style="margin-bottom:0; flex:1;">
                         </div>
-                        <div class="date-time-wrapper" style="margin-bottom: 10px;">
-                            <input type="date" id="inc-date" class="form-control">
+                        
+                        <div class="input-group-row" style="display:flex; gap:10px; align-items: center;">
+                            <input type="date" id="inc-date" class="form-control" style="margin-bottom:0; flex: 1;">
+                            
+                            <button class="btn-primary" onclick="FixedIncomeModule.add()" style="width: auto; background: var(--color-success); margin-bottom: 0; flex: 1;">
+                                Salvar
+                            </button>
                         </div>
-                        <button class="btn-primary" onclick="FixedIncomeModule.add()" style="width: 100%; background: var(--color-success);">Salvar Entrada</button>
                     </div>
-
-                    <div id="inc-list-container" class="habit-grid-container"></div>
-                </div>
 
                     <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                             <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">TOTAL MENSAL</small>
+                                <small style="color: #888; font-size: 0.7rem;">TOTAL</small>
                                 <div style="font-weight: 700; color: #fff;" id="fixed-total">R$ 0.00</div>
                             </div>
                             <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">JÁ PAGO</small>
+                                <small style="color: #888; font-size: 0.7rem;">PAGO</small>
                                 <div style="font-weight: 700; color: var(--color-success);" id="fixed-paid">R$ 0.00</div>
                             </div>
                             <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">FALTA PAGAR</small>
+                                <small style="color: #888; font-size: 0.7rem;">FALTA</small>
                                 <div style="font-weight: 700; color: var(--color-danger);" id="fixed-remaining">R$ 0.00</div>
                             </div>
                         </div>
-                        
                         <div style="width:100%; height:4px; background:#222; border-radius:2px; overflow:hidden;">
                             <div id="fixed-progress-bar" style="width:0%; height:100%; background:var(--color-success); transition:0.5s;"></div>
                         </div>
@@ -1721,6 +1722,7 @@
         },
 
         // 1. AUMENTAR BOTÕES DO GRÁFICO DE ATIVOS
+        // SUBSTITUA APENAS A FUNÇÃO renderDist POR ESTA:
         renderDist() {
             const ctx = document.getElementById('distChart');
             if (!ctx) return;
@@ -1746,24 +1748,13 @@
                     plugins: { 
                         legend: { 
                             position: 'right', 
-                            // AQUI ESTÁ A MUDANÇA DE TAMANHO:
                             labels: { 
                                 color: '#ccc', 
-                                boxWidth: 40, // Aumenta o quadrado da cor
-                                padding: 20,  // Aumenta o espaço entre eles
-                                font: { size: 14 } // Aumenta a letra
-                            },
-                            onClick: (e, legendItem, legend) => {
-                                const index = legendItem.datasetIndex;
-                                const ci = legend.chart;
-                                if (ci.isDatasetVisible(index)) {
-                                    ci.hide(index);
-                                    legendItem.hidden = true;
-                                } else {
-                                    ci.show(index);
-                                    legendItem.hidden = false;
-                                }
+                                boxWidth: 20, /* Diminuí de 40 para 20 */
+                                padding: 15,  /* Ajustei o espaçamento */
+                                font: { size: 12 }
                             }
+                            /* Removi o onClick para o clique voltar a funcionar (riscar/ocultar) */
                         } 
                     } 
                 } 
