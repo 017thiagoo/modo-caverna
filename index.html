@@ -1622,12 +1622,68 @@
         renderDist() {
             const ctx = document.getElementById('distChart');
             if (!ctx) return;
-            const labels = DB.state.banks.map(b => b.name);
+            
+            // 1. AQUI VOCÊ CONTROLA OS NOMES LONGOS
+            const labels = DB.state.banks.map(b => {
+                // Se o nome tiver mais de 15 letras, corta e adiciona "..."
+                if (b.name.length > 15) {
+                    return b.name.substring(0, 15) + '...'; 
+                }
+                return b.name;
+            });
+            
             const values = DB.state.banks.map(b => b.balance);
-            const colors = labels.map(n => n==='Nubank'?'#820ad1':(n==='Inter'?'#ff7a00':(n==='Banco do Brasil'?'#fce300':'#005ca9')));
+            
+            // Cores (Mantidas)
+            const colors = DB.state.banks.map(b => {
+                const n = b.name.toLowerCase();
+                if(n.includes('nubank')) return '#820ad1';
+                if(n.includes('inter')) return '#ff7a00';
+                if(n.includes('brasil') || n.includes('bb')) return '#fce300';
+                if(n.includes('caixa')) return '#005ca9';
+                return '#333';
+            });
+            
             if (this.instances.dist) this.instances.dist.destroy();
-            this.instances.dist = new Chart(ctx, { type: 'doughnut', data: { labels, datasets: [{ data: values.length ? values : [1], backgroundColor: values.length ? colors : ['#333'], borderWidth: 0 }] }, options: { ...this.commonOptions, cutout: '70%', plugins: { legend: { position: 'right', labels: { color: '#888', boxWidth: 10 } } } } });
+            
+            this.instances.dist = new Chart(ctx, { 
+                type: 'doughnut', 
+                data: { 
+                    labels, 
+                    datasets: [{ 
+                        data: values.length ? values : [1], 
+                        backgroundColor: values.length ? colors : ['#333'], 
+                        borderWidth: 0 
+                    }] 
+                }, 
+                options: { 
+                    ...this.commonOptions, 
+                    cutout: '60%', 
+                    layout: {
+                        padding: 20 // Espaço extra em volta do gráfico
+                    },
+                    plugins: { 
+                        legend: { 
+                            // 2. POSIÇÃO DA LEGENDA (Mude para 'bottom' para caber nomes grandes)
+                            position: 'bottom', 
+                            
+                            labels: { 
+                                color: '#eee', 
+                                boxWidth: 30, // Tamanho do quadradinho da cor (Botão)
+                                padding: 20,  // Espaço entre os itens
+                                
+                                // 3. AQUI VOCÊ AUMENTA A FONTE
+                                font: { 
+                                    size: 16, // <--- TAMANHO DA LETRA (Aumente ou diminua aqui)
+                                    weight: 'bold'
+                                }
+                            }
+                        } 
+                    } 
+                } 
+            });
         },
+
         renderFlow() {
             const ctx = document.getElementById('flowChart');
             if (!ctx) return;
