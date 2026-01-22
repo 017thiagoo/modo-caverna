@@ -714,30 +714,27 @@
 
                 <div class="card col-12">
                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="card-title" style="line-height: 1.2; padding-right: 10px;">
+                        <span class="card-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             <i class="fas fa-hand-holding-usd" style="margin-right:8px; color:var(--color-success)"></i> 
-                            Receitas Fixas Mensais
+                            Receitas Fixas
                         </span>
-                        <button class="card-action-btn" onclick="UI.toggle('inc-add-form')" style="white-space: nowrap; flex-shrink: 0;">
-                            + Nova Receita
+                        <button class="card-action-btn" onclick="FixedIncomeModule.cancelEdit()" style="white-space: nowrap;">
+                            + Nova / Cancelar
                         </button>
                     </div>
 
                     <div id="inc-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
-                        
-                        <input type="text" id="inc-name" class="form-control" placeholder="Descrição (ex: Salário)" style="margin-bottom: 10px;">
-
                         <div class="input-group-row" style="display:flex; gap:10px; margin-bottom: 10px;">
-                            <input type="number" id="inc-val" class="form-control" placeholder="Valor (R$)" style="margin-bottom:0; flex:1;">
+                            <input type="text" id="inc-name" class="form-control" placeholder="Descrição" style="margin-bottom:0; flex:2;">
+                            <input type="number" id="inc-val" class="form-control" placeholder="R$" style="margin-bottom:0; flex:1;">
+                        </div>
+                        <div class="input-group-row" style="display:flex; gap:10px; align-items: center;">
                             <select id="inc-bank-select" class="form-control" style="margin-bottom:0; flex:1; font-size: 0.85rem;">
                                 <option value="" disabled selected>Receber em...</option>
                             </select>
-                        </div>
-
-                        <div class="input-group-row" style="display:flex; gap:10px; align-items: center;">
                             <input type="date" id="inc-date" class="form-control" style="margin-bottom:0; flex: 1;">
-                            <button class="btn-primary" onclick="FixedIncomeModule.add()" style="width: auto; background: var(--color-success); margin-bottom: 0; padding: 0 20px; flex: 1;">
-                                Salvar
+                            <button id="btn-save-inc" class="btn-primary" onclick="FixedIncomeModule.save()" style="width: auto; background: var(--color-success); margin-bottom: 0; padding: 0 20px;">
+                                <i class="fas fa-check"></i>
                             </button>
                         </div>
                     </div>
@@ -768,10 +765,10 @@
                 <div class="card col-12">
                     <div class="card-header">
                         <span class="card-title">
-                            <i class="fas fa-file-invoice-dollar" style="margin-right:8px; color:var(--color-danger)"></i> 
+                            <i class="fas fa-file-invoice-dollar" style="margin-right:8px; color:var(--color-warning)"></i> 
                             Gastos Fixos Mensais
                         </span>
-                        <button class="card-action-btn" onclick="UI.toggle('fixed-add-form')">+ Nova Conta</button>
+                        <button class="card-action-btn" onclick="FixedExpensesModule.cancelEdit()">+ Nova / Cancelar</button>
                     </div>
 
                     <div id="fixed-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
@@ -783,21 +780,21 @@
                             <input type="date" id="fixed-date" class="form-control">
                             <input type="time" id="fixed-time" class="form-control">
                         </div>
-                        <button class="btn-primary" onclick="FixedExpensesModule.add()" style="width: 100%;">Salvar Conta</button>
+                        <button id="btn-save-fix" class="btn-primary" onclick="FixedExpensesModule.save()" style="width: 100%;">Salvar Conta</button>
                     </div>
 
                     <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                             <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">TOTAL MENSAL</small>
+                                <small style="color: #888; font-size: 0.7rem;">TOTAL</small>
                                 <div style="font-weight: 700; color: #fff;" id="fixed-total">R$ 0.00</div>
                             </div>
                             <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">JÁ PAGO</small>
+                                <small style="color: #888; font-size: 0.7rem;">PAGO</small>
                                 <div style="font-weight: 700; color: var(--color-success);" id="fixed-paid">R$ 0.00</div>
                             </div>
                             <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">FALTA PAGAR</small>
+                                <small style="color: #888; font-size: 0.7rem;">FALTA</small>
                                 <div style="font-weight: 700; color: var(--color-danger);" id="fixed-remaining">R$ 0.00</div>
                             </div>
                         </div>
@@ -1277,9 +1274,12 @@
         }
     };
 
-    // --- 3.5 MÓDULO RECEITAS (COM EDIÇÃO) ---
+    // --- 3.5 MÓDULO RECEITAS (COM EDIÇÃO COMPLETA) ---
     const FixedIncomeModule = {
-        add() {
+        editingId: null, // Variável para controlar se está editando
+
+        // Função unificada para Salvar ou Atualizar
+        save() {
             const name = document.getElementById('inc-name').value;
             const val = parseFloat(document.getElementById('inc-val').value);
             const date = document.getElementById('inc-date').value;
@@ -1287,28 +1287,63 @@
 
             if (name && !isNaN(val)) {
                 if(!bankId) return alert("Selecione onde o dinheiro vai cair!");
-                DB.state.incomes.push({ id: Date.now(), name, val, date, bankId, received: false });
+
+                if (this.editingId) {
+                    // MODO EDIÇÃO: Atualiza o existente
+                    const item = DB.state.incomes.find(e => e.id === this.editingId);
+                    if (item) {
+                        item.name = name;
+                        item.val = val;
+                        item.date = date;
+                        item.bankId = bankId;
+                    }
+                    this.editingId = null; // Limpa edição
+                    document.getElementById('btn-save-inc').innerHTML = '<i class="fas fa-check"></i>'; // Volta ícone
+                } else {
+                    // MODO CRIAÇÃO: Adiciona novo
+                    DB.state.incomes.push({ id: Date.now(), name, val, date, bankId, received: false });
+                }
+
+                // Limpa e Salva
                 document.getElementById('inc-name').value = '';
                 document.getElementById('inc-val').value = '';
                 DB.save();
-                UI.toggle('inc-add-form');
+                
+                // Fecha o form apenas se estava aberto e foi salvo
+                const form = document.getElementById('inc-add-form');
+                if (!form.classList.contains('hidden')) form.classList.add('hidden');
+                
             } else { alert("Preencha Nome e Valor."); }
         },
 
-        // --- NOVA FUNÇÃO EDITAR ---
+        // Botão para abrir o formulário em modo de edição
         edit(id) {
-            const inc = DB.state.incomes.find(e => e.id === id);
-            if (inc) {
-                const newName = prompt("Editar nome:", inc.name);
-                if (newName !== null && newName.trim() !== "") {
-                    const newVal = parseFloat(prompt("Editar valor (R$):", inc.val));
-                    if (!isNaN(newVal)) {
-                        inc.name = newName;
-                        inc.val = newVal;
-                        DB.save();
-                    }
-                }
+            const item = DB.state.incomes.find(e => e.id === id);
+            if (item) {
+                this.editingId = id;
+                document.getElementById('inc-name').value = item.name;
+                document.getElementById('inc-val').value = item.val;
+                document.getElementById('inc-date').value = item.date;
+                document.getElementById('inc-bank-select').value = item.bankId;
+                
+                // Muda botão para ícone de atualização
+                document.getElementById('btn-save-inc').innerHTML = '<i class="fas fa-sync-alt"></i>';
+                
+                // Abre o form se estiver fechado
+                const form = document.getElementById('inc-add-form');
+                if (form.classList.contains('hidden')) form.classList.remove('hidden');
+                
+                // Scroll suave até o form (opcional)
+                form.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+        },
+        
+        cancelEdit() {
+            this.editingId = null;
+            document.getElementById('inc-name').value = '';
+            document.getElementById('inc-val').value = '';
+            document.getElementById('btn-save-inc').innerHTML = '<i class="fas fa-check"></i>';
+            UI.toggle('inc-add-form');
         },
 
         toggle(id) {
@@ -1346,8 +1381,11 @@
         },
 
         render() {
-            // ... (Código do select de bancos mantido igual) ...
             const bankSelect = document.getElementById('inc-bank-select');
+            if (bankSelect && bankSelect.innerHTML === '') { // Preenche só 1 vez ou se vazio
+                // Mantém valor selecionado se estiver editando
+            }
+            // Recarrega opções sempre para garantir sincronia
             if (bankSelect) {
                 const current = bankSelect.value;
                 bankSelect.innerHTML = '<option value="" disabled selected>Receber em...</option>';
@@ -1395,7 +1433,6 @@
                 `;
             });
 
-            // ... (Código de resumo mantido igual) ...
             const remaining = total - received;
             const percent = total > 0 ? (received / total) * 100 : 0;
             const elTotal = document.getElementById('inc-total');
@@ -1409,37 +1446,68 @@
         }
     };
 
-    // --- 4. FIXED EXPENSES MODULE (COM EDIÇÃO) ---
+    // --- 4. FIXED EXPENSES MODULE (COM EDIÇÃO COMPLETA) ---
     const FixedExpensesModule = {
-        add() {
+        editingId: null,
+
+        save() {
             const name = document.getElementById('fixed-name').value;
             const val = parseFloat(document.getElementById('fixed-val').value);
             const date = document.getElementById('fixed-date').value;
             const time = document.getElementById('fixed-time').value;
 
             if (name && !isNaN(val)) {
-                DB.state.fixed.push({ id: Date.now(), name, val, date, time, paid: false });
+                if (this.editingId) {
+                    // MODO EDIÇÃO
+                    const item = DB.state.fixed.find(e => e.id === this.editingId);
+                    if (item) {
+                        item.name = name;
+                        item.val = val;
+                        item.date = date;
+                        item.time = time;
+                    }
+                    this.editingId = null;
+                    document.getElementById('btn-save-fix').innerText = 'Salvar Conta';
+                } else {
+                    // MODO CRIAÇÃO
+                    DB.state.fixed.push({ id: Date.now(), name, val, date, time, paid: false });
+                }
+
                 document.getElementById('fixed-name').value = '';
                 document.getElementById('fixed-val').value = '';
                 DB.save();
-                UI.toggle('fixed-add-form');
+                
+                const form = document.getElementById('fixed-add-form');
+                if (!form.classList.contains('hidden')) form.classList.add('hidden');
+
             } else { alert("Preencha Nome e Valor."); }
         },
 
-        // --- NOVA FUNÇÃO EDITAR ---
         edit(id) {
-            const expense = DB.state.fixed.find(e => e.id === id);
-            if (expense) {
-                const newName = prompt("Editar nome:", expense.name);
-                if (newName !== null && newName.trim() !== "") {
-                    const newVal = parseFloat(prompt("Editar valor (R$):", expense.val));
-                    if (!isNaN(newVal)) {
-                        expense.name = newName;
-                        expense.val = newVal;
-                        DB.save();
-                    }
-                }
+            const item = DB.state.fixed.find(e => e.id === id);
+            if (item) {
+                this.editingId = id;
+                document.getElementById('fixed-name').value = item.name;
+                document.getElementById('fixed-val').value = item.val;
+                document.getElementById('fixed-date').value = item.date;
+                document.getElementById('fixed-time').value = item.time;
+                
+                // Muda botão
+                document.getElementById('btn-save-fix').innerText = 'Atualizar Conta';
+                
+                // Abre form
+                const form = document.getElementById('fixed-add-form');
+                if (form.classList.contains('hidden')) form.classList.remove('hidden');
+                form.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+        },
+
+        cancelEdit() {
+            this.editingId = null;
+            document.getElementById('fixed-name').value = '';
+            document.getElementById('fixed-val').value = '';
+            document.getElementById('btn-save-fix').innerText = 'Salvar Conta';
+            UI.toggle('fixed-add-form');
         },
 
         toggle(id) {
@@ -1448,12 +1516,10 @@
                 if (!expense.paid) {
                     const banks = DB.state.banks;
                     if (banks.length === 0) return alert("Cadastre um banco!");
-
                     let menu = `Pagar R$ ${expense.val.toFixed(2)} com qual banco?\n\n`;
                     banks.forEach((b, index) => { menu += `${index + 1}. ${b.name} (R$ ${b.balance.toFixed(2)})\n`; });
                     const input = prompt(menu + "\nNúmero:");
                     if (input === null) return;
-                    
                     const bank = banks[parseInt(input) - 1];
                     if (bank) {
                         expense.paid = true;
@@ -1481,26 +1547,15 @@
                 DB.save();
             }
         },
-
+        
         exportToCalendar(id) {
-            // ... (Mesma função de antes) ...
+            // ... (Mantenha sua função de calendário igual) ...
             const t = DB.state.fixed.find(e => e.id === id);
             if (!t || !t.date || !t.time) return alert("Defina Data e Hora!");
             const start = t.date.replace(/-/g, '') + 'T' + t.time.replace(/:/g, '') + '00';
-            const icsContent = [
-                'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
-                `DTSTART:${start}`, `DTEND:${start}`,
-                `SUMMARY:Pagar: ${t.name}`, `DESCRIPTION:Valor: R$ ${t.val}`,
-                'BEGIN:VALARM', 'TRIGGER:-PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Reminder', 'END:VALARM',
-                'END:VEVENT', 'END:VCALENDAR'
-            ].join('\n');
+            const icsContent = [ 'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', `DTSTART:${start}`, `DTEND:${start}`, `SUMMARY:Pagar: ${t.name}`, `DESCRIPTION:Valor: R$ ${t.val}`, 'BEGIN:VALARM', 'TRIGGER:-PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Reminder', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR' ].join('\n');
             const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-            const link = document.createElement('a');
-            link.href = window.URL.createObjectURL(blob);
-            link.setAttribute('download', `pagar_${t.name}.ics`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            const link = document.createElement('a'); link.href = window.URL.createObjectURL(blob); link.setAttribute('download', `pagar_${t.name}.ics`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
         },
 
         render() {
@@ -1545,7 +1600,6 @@
                 `;
             });
 
-            // ... (Código de resumo mantido igual) ...
             const remaining = totalVal - paidVal;
             const percent = totalVal > 0 ? (paidVal / totalVal) * 100 : 0;
             const elTotal = document.getElementById('fixed-total');
