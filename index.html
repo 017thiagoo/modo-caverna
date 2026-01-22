@@ -1623,18 +1623,19 @@
             const ctx = document.getElementById('distChart');
             if (!ctx) return;
             
-            // 1. AQUI VOCÊ CONTROLA OS NOMES LONGOS
+            // 1. LÓGICA DE ABREVIAÇÃO (Para caber na direita sem cortar)
             const labels = DB.state.banks.map(b => {
-                // Se o nome tiver mais de 15 letras, corta e adiciona "..."
-                if (b.name.length > 15) {
-                    return b.name.substring(0, 15) + '...'; 
-                }
-                return b.name;
+                const n = b.name;
+                // Abreviar nomes longos conhecidos
+                if (n === 'Banco do Brasil') return 'B. do Brasil'; 
+                if (n === 'Caixa Econômica') return 'Caixa';
+                // Se for outro nome muito longo, corta e põe "..."
+                if (n.length > 14) return n.substring(0, 12) + '...';
+                return n;
             });
             
             const values = DB.state.banks.map(b => b.balance);
             
-            // Cores (Mantidas)
             const colors = DB.state.banks.map(b => {
                 const n = b.name.toLowerCase();
                 if(n.includes('nubank')) return '#820ad1';
@@ -1660,30 +1661,39 @@
                     ...this.commonOptions, 
                     cutout: '60%', 
                     layout: {
-                        padding: 20 // Espaço extra em volta do gráfico
+                        padding: 0 // Remove margem extra para ganhar espaço
                     },
                     plugins: { 
                         legend: { 
-                            // 2. POSIÇÃO DA LEGENDA (Mude para 'bottom' para caber nomes grandes)
-                            position: 'right', 
-                            
+                            display: true, 
+                            position: 'right', // Mantido na direita como pediu
+                            align: 'center',   // Centraliza verticalmente
                             labels: { 
                                 color: '#eee', 
-                                boxWidth: 30, // Tamanho do quadradinho da cor (Botão)
-                                padding: 20,  // Espaço entre os itens
-                                
-                                // 3. AQUI VOCÊ AUMENTA A FONTE
+                                boxWidth: 15,  // Botão colorido um pouco menor para dar espaço ao texto
+                                padding: 15,   // Espaço entre as linhas
                                 font: { 
-                                    size: 16, // <--- TAMANHO DA LETRA (Aumente ou diminua aqui)
-                                    weight: 'bold'
+                                    size: 13,  // Tamanho equilibrado para mobile
+                                    weight: 'bold',
+                                    family: "'Inter', sans-serif"
                                 }
                             }
-                        } 
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    // Mostra o nome completo no tooltip ao segurar o dedo
+                                    const index = context.dataIndex;
+                                    const originalName = DB.state.banks[index].name; 
+                                    const val = context.raw;
+                                    return ` ${originalName}: R$ ${val.toFixed(2)}`;
+                                }
+                            }
+                        }
                     } 
                 } 
             });
         },
-
         renderFlow() {
             const ctx = document.getElementById('flowChart');
             if (!ctx) return;
