@@ -721,17 +721,13 @@
                         <button class="card-action-btn" onclick="UI.toggle('inc-add-form')">+ Nova Receita</button>
                     </div>
 
-                    <div id="inc-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
-                        <div class="input-group-row" style="display:flex; gap:10px; margin-bottom: 10px;">
-                            <input type="text" id="inc-name" class="form-control" placeholder="Descrição (ex: Salário)" style="margin-bottom:0; flex:2;">
-                            <input type="number" id="inc-val" class="form-control" placeholder="Valor (R$)" style="margin-bottom:0; flex:1;">
-                        </div>
-                        <div class="input-group-row" style="display:flex; gap:10px; align-items: center;">
-                            <input type="date" id="inc-date" class="form-control" style="margin-bottom:0; flex: 1;">
-                            <button class="btn-primary" onclick="FixedIncomeModule.add()" style="width: auto; background: var(--color-success); margin-bottom: 0; flex: 1;">
-                                Salvar
-                            </button>
-                        </div>
+                    <div id="inc-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="inc-name" class="form-control" placeholder="Desc." style="margin-bottom:0; flex: 2; min-width: 80px;">
+                        <input type="number" id="inc-val" class="form-control" placeholder="R$" style="margin-bottom:0; flex: 1; min-width: 60px;">
+                        <input type="date" id="inc-date" class="form-control" style="margin-bottom:0; flex: 1.5; min-width: 100px;">
+                        <button class="btn-primary" onclick="FixedIncomeModule.add()" style="width: auto; background: var(--color-success); margin-bottom: 0; padding: 0 15px;">
+                            <i class="fas fa-check"></i>
+                        </button>
                     </div>
 
                     <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);">
@@ -766,20 +762,16 @@
                         <button class="card-action-btn" onclick="UI.toggle('fixed-add-form')">+ Nova Conta</button>
                     </div>
 
-                    <div id="inc-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
-                
+                    <div id="fixed-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
                         <div class="input-group-row" style="display:flex; gap:10px; margin-bottom: 10px;">
-                            <input type="text" id="inc-name" class="form-control" placeholder="Descrição (ex: Salário)" style="margin-bottom:0; flex:2;">
-                            <input type="number" id="inc-val" class="form-control" placeholder="Valor (R$)" style="margin-bottom:0; flex:1;">
+                            <input type="text" id="fixed-name" class="form-control" placeholder="Nome (ex: Aluguel)" style="margin-bottom:0; flex:2;">
+                            <input type="number" id="fixed-val" class="form-control" placeholder="Valor (R$)" style="margin-bottom:0; flex:1;">
                         </div>
-                        
-                        <div class="input-group-row" style="display:flex; gap:10px; align-items: center;">
-                            <input type="date" id="inc-date" class="form-control" style="margin-bottom:0; flex: 1;">
-                            
-                            <button class="btn-primary" onclick="FixedIncomeModule.add()" style="width: auto; background: var(--color-success); margin-bottom: 0; flex: 1;">
-                                Salvar
-                            </button>
+                        <div class="date-time-wrapper" style="margin-bottom: 10px;">
+                            <input type="date" id="fixed-date" class="form-control">
+                            <input type="time" id="fixed-time" class="form-control">
                         </div>
+                        <button class="btn-primary" onclick="FixedExpensesModule.add()" style="width: 100%;">Salvar Conta</button>
                     </div>
 
                     <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);">
@@ -895,11 +887,14 @@
                     </select>
                 </div>
 
-                <div class="card-header">...</div>
+                <div class="card card-centralizado">
+                    <div class="card-header" style="justify-content: space-between;">
+                        <span class="card-title">Performance da Semana</span>
+                    </div>
 
-                <div style="height: 180px; margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 12px;">
-                    <canvas id="habitPerformanceChart"></canvas>
-                </div>
+                    <div style="height: 180px; margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 12px;">
+                        <canvas id="habitPerformanceChart"></canvas>
+                    </div>
 
                 <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
                     <input type="text" id="habit-input" class="form-control" placeholder="Novo hábito..." style="margin-bottom: 0; flex: 2;">
@@ -996,13 +991,20 @@
         }
     };
 
-    // --- 2. SYSTEM CONTROLLER ---
+    // --- 2. SYSTEM CONTROLLER (Ajuste na Inicialização) ---
     const System = {
         init() {
             DB.init();
             this.updateGreeting();
             FinanceModule.init();
-            this.refreshAll(); // Renderiza tudo ao iniciar
+            
+            // Força a renderização inicial
+            this.refreshAll();
+            
+            // GARANTIA: Desenha os gráficos novamente após 300ms para garantir que a tela carregou
+            setTimeout(() => {
+                ChartsModule.renderAll();
+            }, 300);
         },
 
         updateGreeting() {
@@ -1813,7 +1815,7 @@
                             position: 'right', 
                             labels: { 
                                 color: '#eee', 
-                                boxWidth: 50,  // AUMENTADO (Era 20)
+                                boxWidth: 25,  // AUMENTADO (Era 20)
                                 padding: 25,   // AUMENTADO
                                 font: { 
                                     size: 16,  // AUMENTADO (Letra maior)
@@ -1924,7 +1926,10 @@
         }
     };
 
-    window.addEventListener('DOMContentLoaded', () => System.init());
+    // --- BOOTSTRAP ---
+    window.addEventListener('DOMContentLoaded', () => {
+        System.init();
+    });
 </script>
 </body>
 </html>
