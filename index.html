@@ -905,7 +905,8 @@
                         <option value="Semanal">Semanal</option>
                         <option value="Mensal">Mensal</option>
                     </select>
-                    <button class="btn-primary" style="width: auto;" onclick="HabitModule.add()">Adicionar</button>
+                    
+                    <button id="btn-habit-save" class="btn-primary" style="width: auto;" onclick="HabitModule.save()">Adicionar</button>
                 </div>
                 
                 <div id="habit-list-container" class="habit-grid-container"></div>
@@ -973,7 +974,8 @@
             habits: [],
             library: [],
             fixed: [], // Gastos Fixos
-            incomes: [] // <--- ADICIONE ESTA LINHA AQUI (Receitas Fixas)
+            incomes: [], // <--- ADICIONE ESTA LINHA AQUI (Receitas Fixas)
+            lastWeek: null
         },
         init() {
             const saved = localStorage.getItem(this.key);
@@ -1014,6 +1016,10 @@
             setTimeout(() => {
                 if(typeof ChartsModule !== 'undefined') ChartsModule.renderAll();
             }, 300);
+
+            if(typeof HabitModule !== 'undefined') HabitModule.checkWeeklyReset();
+
+            FinanceModule.init();
         },
 
         updateGreeting() {
@@ -1722,36 +1728,104 @@
         }
     };
 
-    // --- 6. HABIT MODULE (COM EDIÇÃO) ---
+    // --- 6. HABIT MODULE (EDIÇÃO COMPLETA + RESET SEMANAL) ---
     const HabitModule = {
-        add() {
-            const txt = document.getElementById('habit-input').value;
-            const freq = document.getElementById('habit-freq').value; 
-            if (txt) {
-                DB.state.habits.push({ txt, freq, checks: Array(7).fill(false) });
-                document.getElementById('habit-input').value = '';
+        editingIdx: null,
+
+        // Função auxiliar para pegar número da semana
+        getWeekNumber(d) {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+            var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+            var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+            return weekNo;
+        },
+
+        checkWeeklyReset() {
+            const currentWeek = this.getWeekNumber(new Date());
+            
+            // Se não tem semana salva, salva a atual
+            if (!DB.state.lastWeek) {
+                DB.state.lastWeek = currentWeek;
                 DB.save();
+                return;
+            }
+
+            // Se a semana mudou, reseta os checks
+            if (DB.state.lastWeek !== currentWeek) {
+                if(confirm("Uma nova semana começou! Deseja resetar os checks dos hábitos?")) {
+                    DB.state.habits.forEach(h => {
+                        h.checks = Array(7).fill(false);
+                    });
+                    DB.state.lastWeek = currentWeek;
+                    DB.save();
+                    this.render();
+                    alert("Hábitos resetados para a nova semana.");
+                } else {
+                    // Se cancelar, atualiza a semana para não perguntar de novo hoje, mas mantém dados
+                    DB.state.lastWeek = currentWeek;
+                    DB.save();
+                }
             }
         },
-        
-        // --- NOVA FUNÇÃO DE EDITAR ---
-        edit(index) {
-            const habit = DB.state.habits[index];
-            const newTxt = prompt("Editar hábito:", habit.txt);
-            if (newTxt !== null && newTxt.trim() !== "") {
-                habit.txt = newTxt;
+
+        save() {
+            const txt = document.getElementById('habit-input').value;
+            const freq = document.getElementById('habit-freq').value; 
+            
+            if (txt) {
+                if (this.editingIdx !== null) {
+                    // MODO EDIÇÃO
+                    DB.state.habits[this.editingIdx].txt = txt;
+                    DB.state.habits[this.editingIdx].freq = freq;
+                    this.cancelEdit();
+                } else {
+                    // MODO CRIAÇÃO
+                    DB.state.habits.push({ txt, freq, checks: Array(7).fill(false) });
+                    document.getElementById('habit-input').value = '';
+                }
                 DB.save();
+            } else {
+                alert("Digite o nome do hábito.");
             }
+        },
+
+        edit(index) {
+            const h = DB.state.habits[index];
+            this.editingIdx = index;
+            document.getElementById('habit-input').value = h.txt;
+            document.getElementById('habit-freq').value = h.freq || 'Diário';
+            
+            // Muda o botão
+            const btn = document.getElementById('btn-habit-save');
+            btn.innerText = 'Atualizar';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success');
+        },
+
+        cancelEdit() {
+            this.editingIdx = null;
+            document.getElementById('habit-input').value = '';
+            const btn = document.getElementById('btn-habit-save');
+            btn.innerText = 'Adicionar';
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-primary');
         },
 
         toggle(hIdx, dayIdx) {
             if (!DB.state.habits[hIdx].checks) DB.state.habits[hIdx].checks = Array(7).fill(false);
             DB.state.habits[hIdx].checks[dayIdx] = !DB.state.habits[hIdx].checks[dayIdx];
             DB.save();
+            // Atualiza o gráfico em tempo real ao clicar
+            if(typeof ChartsModule !== 'undefined') ChartsModule.renderHabitPerformance();
         },
         
         delete(index) {
-            if(confirm("Apagar?")) { DB.state.habits.splice(index, 1); DB.save(); }
+            if(confirm("Apagar hábito?")) { 
+                if(this.editingIdx === index) this.cancelEdit();
+                DB.state.habits.splice(index, 1); 
+                DB.save(); 
+            }
         },
         
         render() {
@@ -1781,20 +1855,20 @@
                 container.innerHTML += `
                     <div class="habit-card-mini fade-in">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                            <div>
-                                <span style="font-weight:600;">${h.txt}</span>
+                            <div style="flex: 1;">
+                                <span style="font-weight:600; display:block;">${h.txt}</span>
                                 <span class="cat-badge">${frequencia}</span>
                             </div>
-                            <div style="display:flex; gap:15px;">
+                            <div style="display:flex; gap:10px;">
                                 <i class="fas fa-pen" onclick="HabitModule.edit(${i})" style="cursor:pointer; color:#888; font-size:0.9rem;" title="Editar"></i>
-                                <i class="fas fa-times" onclick="HabitModule.delete(${i})" style="cursor:pointer; color:#444;"></i>
+                                <i class="fas fa-trash" onclick="HabitModule.delete(${i})" style="cursor:pointer; color:#666; font-size:0.9rem;"></i>
                             </div>
                         </div>
                         <div class="habit-days" style="gap:2px;">${checksHtml}</div>
                     </div>
                 `;
             });
-            if(container.innerHTML === '') container.innerHTML = '<div class="empty-state">Sem hábitos.</div>';
+            if(container.innerHTML === '') container.innerHTML = '<div class="empty-state">Sem hábitos neste filtro.</div>';
         }
     };
 
@@ -1972,6 +2046,66 @@
             DB.state.transactions.forEach(t => { if (t.type === 'income') income += t.val; else expense += t.val; });
             if (this.instances.flow) this.instances.flow.destroy();
             this.instances.flow = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Saídas'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] }, options: { ...this.commonOptions, scales: { y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, x: { grid: { display: false }, ticks: { color: '#fff' } } } } });
+        },
+        renderHabitPerformance() {
+            const ctx = document.getElementById('habitPerformanceChart');
+            if (!ctx) return;
+
+            // Prepara os dados: Diário, Semanal, Mensal
+            const stats = {
+                'Diário': { done: 0, total: 0 },
+                'Semanal': { done: 0, total: 0 },
+                'Mensal': { done: 0, total: 0 }
+            };
+
+            // Calcula checks
+            DB.state.habits.forEach(h => {
+                const cat = h.freq || 'Diário';
+                if(stats[cat]) {
+                    const marked = h.checks ? h.checks.filter(Boolean).length : 0;
+                    stats[cat].done += marked;
+                    stats[cat].total += 7; 
+                }
+            });
+
+            const categories = ['Diário', 'Semanal', 'Mensal'];
+            const dataDone = categories.map(c => stats[c].done);
+            const dataPending = categories.map(c => stats[c].total - stats[c].done);
+
+            if (this.instances.habit) this.instances.habit.destroy();
+
+            // Desenha o Gráfico de Barras Empilhadas
+            this.instances.habit = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [
+                        {
+                            label: 'Feito',
+                            data: dataDone,
+                            backgroundColor: '#10b981', // Verde
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Pendente',
+                            data: dataPending,
+                            backgroundColor: '#333', // Escuro
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    ...this.commonOptions,
+                    indexAxis: 'y', // Barra Horizontal
+                    scales: {
+                        x: { stacked: true, grid: { color: '#222' } },
+                        y: { stacked: true, grid: { display: false }, ticks: { color: '#fff' } }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'bottom', labels: { color: '#888' } }
+                    }
+                }
+            });
         }
     };
 
