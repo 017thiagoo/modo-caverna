@@ -715,47 +715,6 @@
                 <div class="card col-12">
                     <div class="card-header">
                         <span class="card-title">
-                            <i class="fas fa-hand-holding-usd" style="margin-right:8px; color:var(--color-success)"></i> 
-                            Receitas Fixas Mensais
-                        </span>
-                        <button class="card-action-btn" onclick="UI.toggle('inc-add-form')">+ Nova Receita</button>
-                    </div>
-
-                    <div id="inc-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; display: flex; gap: 10px; align-items: center;">
-                        <input type="text" id="inc-name" class="form-control" placeholder="Desc." style="margin-bottom:0; flex: 2;">
-                        <input type="number" id="inc-val" class="form-control" placeholder="R$" style="margin-bottom:0; flex: 1;">
-                        <input type="date" id="inc-date" class="form-control" style="margin-bottom:0; flex: 1.5;">
-                        <button class="btn-primary" onclick="FixedIncomeModule.add()" style="width: auto; background: var(--color-success); margin-bottom: 0; padding: 0 20px;">
-                            <i class="fas fa-check"></i>
-                        </button>
-                    </div>
-
-                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                            <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">PREVISÃO</small>
-                                <div style="font-weight: 700; color: #fff;" id="inc-total">R$ 0.00</div>
-                            </div>
-                            <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">RECEBIDO</small>
-                                <div style="font-weight: 700; color: var(--color-success);" id="inc-received">R$ 0.00</div>
-                            </div>
-                            <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">FALTA</small>
-                                <div style="font-weight: 700; color: #666;" id="inc-remaining">R$ 0.00</div>
-                            </div>
-                        </div>
-                        <div style="width:100%; height:4px; background:#222; border-radius:2px; overflow:hidden;">
-                            <div id="inc-progress-bar" style="width:0%; height:100%; background:var(--color-success); transition:0.5s;"></div>
-                        </div>
-                    </div>
-
-                    <div id="inc-list-container" class="habit-grid-container"></div>
-                </div>
-
-                <div class="card col-12">
-                    <div class="card-header">
-                        <span class="card-title">
                             <i class="fas fa-file-invoice-dollar" style="margin-right:8px; color:var(--color-warning)"></i> 
                             Gastos Fixos Mensais
                         </span>
@@ -763,32 +722,36 @@
                     </div>
 
                     <div id="fixed-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
+                
                         <div class="input-group-row" style="display:flex; gap:10px; margin-bottom: 10px;">
                             <input type="text" id="fixed-name" class="form-control" placeholder="Nome (ex: Aluguel)" style="margin-bottom:0; flex:2;">
                             <input type="number" id="fixed-val" class="form-control" placeholder="Valor (R$)" style="margin-bottom:0; flex:1;">
                         </div>
+
                         <div class="date-time-wrapper" style="margin-bottom: 10px;">
                             <input type="date" id="fixed-date" class="form-control">
                             <input type="time" id="fixed-time" class="form-control">
                         </div>
+
                         <button class="btn-primary" onclick="FixedExpensesModule.add()" style="width: 100%;">Salvar Conta</button>
                     </div>
 
                     <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                             <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">TOTAL</small>
+                                <small style="color: #888; font-size: 0.7rem;">TOTAL MENSAL</small>
                                 <div style="font-weight: 700; color: #fff;" id="fixed-total">R$ 0.00</div>
                             </div>
                             <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">PAGO</small>
+                                <small style="color: #888; font-size: 0.7rem;">JÁ PAGO</small>
                                 <div style="font-weight: 700; color: var(--color-success);" id="fixed-paid">R$ 0.00</div>
                             </div>
                             <div style="text-align: center;">
-                                <small style="color: #888; font-size: 0.7rem;">FALTA</small>
+                                <small style="color: #888; font-size: 0.7rem;">FALTA PAGAR</small>
                                 <div style="font-weight: 700; color: var(--color-danger);" id="fixed-remaining">R$ 0.00</div>
                             </div>
                         </div>
+                        
                         <div style="width:100%; height:4px; background:#222; border-radius:2px; overflow:hidden;">
                             <div id="fixed-progress-bar" style="width:0%; height:100%; background:var(--color-success); transition:0.5s;"></div>
                         </div>
@@ -887,15 +850,6 @@
                     </select>
                 </div>
 
-                <div class="card card-centralizado">
-                    <div class="card-header" style="justify-content: space-between;">
-                        <span class="card-title">Performance da Semana</span>
-                    </div>
-
-                    <div style="height: 180px; margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 12px;">
-                        <canvas id="habitPerformanceChart"></canvas>
-                    </div>
-
                 <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
                     <input type="text" id="habit-input" class="form-control" placeholder="Novo hábito..." style="margin-bottom: 0; flex: 2;">
                     <select id="habit-freq" class="form-control" style="margin-bottom: 0; width: 130px;">
@@ -970,8 +924,7 @@
             tasks: [],
             habits: [],
             library: [],
-            fixed: [], // Adicionado para suportar gastos fixos
-            incomes: []
+            fixed: [] // Adicionado para suportar gastos fixos
         },
         init() {
             const saved = localStorage.getItem(this.key);
@@ -991,19 +944,13 @@
         }
     };
 
-    // --- 2. SYSTEM CONTROLLER (Ajuste na Inicialização) ---
+    // --- 2. SYSTEM CONTROLLER ---
     const System = {
         init() {
             DB.init();
             this.updateGreeting();
             FinanceModule.init();
-            
-            // Garante que a Home (dashboard) seja a primeira a ser renderizada
-            document.getElementById('dashboard').classList.remove('hidden');
-            this.refreshAll(); 
-            
-            // Força o desenho dos gráficos logo após abrir
-            setTimeout(() => { ChartsModule.renderAll(); }, 200);
+            this.refreshAll(); // Renderiza tudo ao iniciar
         },
 
         updateGreeting() {
@@ -1027,8 +974,7 @@
         refreshAll() {
             // Renderiza TODOS os módulos
             FinanceModule.render();
-            FixedExpensesModule.render();
-            if(typeof FixedIncomeModule !== 'undefined') FixedIncomeModule.render()
+            if(typeof FixedExpensesModule !== 'undefined') FixedExpensesModule.render();
             TaskModule.render();
             HabitModule.render();
             LibraryModule.render();
@@ -1252,110 +1198,6 @@
                     `;
                 });
             }
-        }
-    };
-
-    // --- MÓDULO RECEITAS (ATUALIZADO COM RESUMO) ---
-    const FixedIncomeModule = {
-        add() {
-            const name = document.getElementById('inc-name').value;
-            const val = parseFloat(document.getElementById('inc-val').value);
-            const date = document.getElementById('inc-date').value;
-
-            if (name && !isNaN(val)) {
-                DB.state.incomes.push({ id: Date.now(), name, val, date, received: false });
-                document.getElementById('inc-name').value = '';
-                document.getElementById('inc-val').value = '';
-                DB.save();
-                UI.toggle('inc-add-form');
-            } else { alert("Preencha Nome e Valor."); }
-        },
-
-        toggle(id) {
-            const inc = DB.state.incomes.find(e => e.id === id);
-            if (inc) {
-                if (!inc.received) {
-                    const caixa = DB.state.banks.find(b => b.name.toLowerCase().includes('caixa')) || DB.state.banks[0];
-                    if(!caixa) return alert("Cadastre a conta Caixa!");
-
-                    if (confirm(`Receber R$ ${inc.val.toFixed(2)} na conta ${caixa.name}?`)) {
-                        inc.received = true;
-                        caixa.balance += inc.val;
-                        
-                        const today = new Date().toLocaleDateString('pt-BR');
-                        DB.state.transactions.unshift({
-                            id: Date.now(), date: today, desc: `Entrada Fixa: ${inc.name}`,
-                            val: inc.val, type: 'income', accName: caixa.name
-                        });
-                        DB.save();
-                    }
-                } else {
-                    if(confirm("Desmarcar recebimento? (Saldo não será alterado).")) {
-                        inc.received = false;
-                        DB.save();
-                    }
-                }
-            }
-        },
-
-        delete(id) {
-            if(confirm("Remover?")) {
-                DB.state.incomes = DB.state.incomes.filter(e => e.id !== id);
-                DB.save();
-            }
-        },
-
-        render() {
-            const list = document.getElementById('inc-list-container');
-            if (!list) return;
-            list.innerHTML = '';
-            
-            const sorted = [...DB.state.incomes].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-            let total = 0, received = 0;
-
-            sorted.forEach(e => {
-                total += e.val;
-                if(e.received) received += e.val;
-
-                const statusColor = e.received ? 'var(--color-success)' : '#444';
-                const icon = e.received ? 'fa-check-circle' : 'fa-circle';
-                const opacity = e.received ? '0.5' : '1';
-                const date = e.date ? e.date.split('-').reverse().join('/') : 'S/D';
-
-                list.innerHTML += `
-                    <div class="habit-card-mini fade-in" style="opacity:${opacity}; border-left:3px solid ${statusColor}; padding:15px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div style="display:flex; align-items:center; gap:15px;">
-                                <i class="far ${icon}" onclick="FixedIncomeModule.toggle(${e.id})" style="color:${e.received ? 'var(--color-success)' : '#666'}; cursor:pointer; font-size:1.5rem;"></i>
-                                <div>
-                                    <span style="font-weight:600; display:block;">${e.name}</span>
-                                    <span style="color:var(--color-success); font-weight:bold;">+ R$ ${e.val.toFixed(2)}</span>
-                                    <small style="color:#888; display:block;">${date} &bull; Caixa</small>
-                                </div>
-                            </div>
-                            <i class="fas fa-trash" onclick="FixedIncomeModule.delete(${e.id})" style="cursor:pointer; color:#666; font-size:1.1rem;"></i>
-                        </div>
-                    </div>
-                `;
-            });
-
-            // ATUALIZA O PAINEL DE RESUMO
-            const remaining = total - received;
-            const percent = total > 0 ? (received / total) * 100 : 0;
-            
-            const elTotal = document.getElementById('inc-total');
-            const elRec = document.getElementById('inc-received');
-            const elRem = document.getElementById('inc-remaining');
-            const elBar = document.getElementById('inc-progress-bar');
-
-            if(elTotal) {
-                elTotal.innerText = `R$ ${total.toFixed(2)}`;
-                elRec.innerText = `R$ ${received.toFixed(2)}`;
-                elRem.innerText = `R$ ${remaining.toFixed(2)}`;
-                elBar.style.width = `${percent}%`;
-            }
-
-            if(list.innerHTML === '') list.innerHTML = '<div class="empty-state">Nenhuma receita fixa.</div>';
         }
     };
 
@@ -1750,122 +1592,53 @@
         }
     };
 
-    // --- 8. CHARTS MODULE (CORRIGIDO: LEGENDA EM BAIXO E NOMES COMPLETOS) ---
+    // --- 8. CHARTS MODULE ---
     const ChartsModule = {
         instances: {},
-        
         renderAll() {
-            // Verifica se o elemento existe antes de tentar desenhar
-            const dash = document.getElementById('dashboard');
-            if (dash && !dash.classList.contains('hidden')) {
-                setTimeout(() => { 
-                    this.renderRadar(); 
-                    this.renderDist(); 
-                    this.renderFlow();
-                    this.renderHabitPerformance(); 
-                }, 100);
-            }
+            setTimeout(() => { this.renderRadar(); this.renderDist(); this.renderFlow(); }, 50);
         },
-
         commonOptions: {
-            responsive: true, 
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             animation: { duration: 1000, easing: 'easeOutQuart' },
             plugins: { legend: { display: false } }
         },
-
+        renderRadar() {
+            const ctx = document.getElementById('radarChart');
+            if (!ctx) return;
+            const tasksTotal = DB.state.tasks.length || 1;
+            const tasksDone = DB.state.tasks.filter(t => t.done).length;
+            const taskScore = (tasksDone / tasksTotal) * 100;
+            const data = {
+                labels: ['Tarefas', 'Hábitos', 'Finanças', 'Estudo', 'Foco'],
+                datasets: [{
+                    label: 'Nível', data: [taskScore, 60, 85, 70, 90],
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444', borderWidth: 1
+                }]
+            };
+            if (this.instances.radar) this.instances.radar.destroy();
+            this.instances.radar = new Chart(ctx, { type: 'radar', data, options: { ...this.commonOptions, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false, backdropColor: 'transparent' } } } } });
+        },
         renderDist() {
             const ctx = document.getElementById('distChart');
             if (!ctx) return;
-            
-            // USE O NOME COMPLETO (SEM CORTAR)
             const labels = DB.state.banks.map(b => b.name);
             const values = DB.state.banks.map(b => b.balance);
-            
-            // Cores fixas
-            const colors = DB.state.banks.map(b => {
-                const n = b.name.toLowerCase();
-                if(n.includes('nubank')) return '#820ad1';
-                if(n.includes('inter')) return '#ff7a00';
-                if(n.includes('brasil') || n.includes('bb')) return '#fce300';
-                if(n.includes('caixa')) return '#005ca9';
-                return '#333';
-            });
-            
+            const colors = labels.map(n => n==='Nubank'?'#820ad1':(n==='Inter'?'#ff7a00':(n==='Banco do Brasil'?'#fce300':'#005ca9')));
             if (this.instances.dist) this.instances.dist.destroy();
-            
-            this.instances.dist = new Chart(ctx, { 
-                type: 'doughnut', 
-                data: { 
-                    labels, 
-                    datasets: [{ 
-                        data: values.length ? values : [1], 
-                        backgroundColor: values.length ? colors : ['#333'], 
-                        borderWidth: 0 
-                    }] 
-                }, 
-                options: { 
-                    ...this.commonOptions, 
-                    cutout: '55%', 
-                    layout: { padding: 20 }, // Margem para não cortar a sombra
-                    plugins: { 
-                        legend: { 
-                            display: true, 
-                            // POSIÇÃO: EM BAIXO E CENTRALIZADO
-                            position: 'bottom', 
-                            align: 'center',
-                            labels: { 
-                                color: '#eee', 
-                                boxWidth: 20, 
-                                padding: 20, 
-                                font: { 
-                                    size: 14, // Fonte aumentada
-                                    weight: 'bold' 
-                                } 
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const val = context.raw;
-                                    return ` R$ ${val.toFixed(2)}`;
-                                }
-                            }
-                        }
-                    } 
-                } 
-            });
-        },
-        
-        // Mantenha os outros gráficos iguais...
-        renderHabitPerformance() {
-             const ctx = document.getElementById('habitPerformanceChart'); if (!ctx) return;
-             let totalChecks = 0; let totalPossible = 0;
-             DB.state.habits.forEach(h => { if(h.checks) { totalChecks += h.checks.filter(Boolean).length; totalPossible += 7; } });
-             const dataValues = totalPossible > 0 ? [totalChecks, totalPossible - totalChecks] : [0, 1];
-             const bgColors = totalPossible > 0 ? ['#10b981', '#333'] : ['#333', '#333'];
-             if (this.instances.habit) this.instances.habit.destroy();
-             this.instances.habit = new Chart(ctx, { type: 'doughnut', data: { labels: ['Feito', 'Falta'], datasets: [{ data: dataValues, backgroundColor: bgColors, borderWidth: 0 }] }, options: { ...this.commonOptions, cutout: '70%', plugins: { legend: { display: true, position: 'right', labels: { color: '#ccc', boxWidth: 15 } } } } });
-        },
-        renderRadar() {
-             const ctx = document.getElementById('radarChart'); if (!ctx) return;
-             const tasksTotal = DB.state.tasks.length || 1; const tasksDone = DB.state.tasks.filter(t => t.done).length; const taskScore = (tasksDone / tasksTotal) * 100;
-             const data = { labels: ['Tarefas', 'Hábitos', 'Finanças', 'Estudo', 'Foco'], datasets: [{ label: 'Nível', data: [taskScore, 60, 85, 70, 90], backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444', borderWidth: 1 }] };
-             if (this.instances.radar) this.instances.radar.destroy();
-             this.instances.radar = new Chart(ctx, { type: 'radar', data, options: { ...this.commonOptions, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false, backdropColor: 'transparent' } } } } });
+            this.instances.dist = new Chart(ctx, { type: 'doughnut', data: { labels, datasets: [{ data: values.length ? values : [1], backgroundColor: values.length ? colors : ['#333'], borderWidth: 0 }] }, options: { ...this.commonOptions, cutout: '70%', plugins: { legend: { position: 'right', labels: { color: '#888', boxWidth: 10 } } } } });
         },
         renderFlow() {
-             const ctx = document.getElementById('flowChart'); if (!ctx) return;
-             let income = 0, expense = 0; DB.state.transactions.forEach(t => { if (t.type === 'income') income += t.val; else expense += t.val; });
-             if (this.instances.flow) this.instances.flow.destroy();
-             this.instances.flow = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Saídas'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] }, options: { ...this.commonOptions, scales: { y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, x: { grid: { display: false }, ticks: { color: '#fff' } } } } });
+            const ctx = document.getElementById('flowChart');
+            if (!ctx) return;
+            let income = 0, expense = 0;
+            DB.state.transactions.forEach(t => { if (t.type === 'income') income += t.val; else expense += t.val; });
+            if (this.instances.flow) this.instances.flow.destroy();
+            this.instances.flow = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Saídas'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] }, options: { ...this.commonOptions, scales: { y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, x: { grid: { display: false }, ticks: { color: '#fff' } } } } });
         }
     };
 
-    // --- 9. BOOTSTRAP (CORREÇÃO DE CARREGAMENTO) ---
-    window.addEventListener('DOMContentLoaded', () => {
-        System.init();
-    });
+    window.addEventListener('DOMContentLoaded', () => System.init());
 </script>
 </body>
 </html>
