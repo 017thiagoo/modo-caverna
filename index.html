@@ -1583,7 +1583,7 @@
         }
     };
 
-    // --- 5. TASK MODULE ---
+    // --- 5. TASK MODULE (COM EDIÇÃO) ---
     const TaskModule = {
         add() {
             const desc = document.getElementById('task-input').value;
@@ -1599,6 +1599,19 @@
             }
         },
         
+        // --- NOVA FUNÇÃO DE EDITAR ---
+        edit(index) {
+            const task = DB.state.tasks[index];
+            const newDesc = prompt("Editar nome da tarefa:", task.desc);
+            if (newDesc !== null && newDesc.trim() !== "") {
+                task.desc = newDesc;
+                // Opcional: Se quiser editar data também, descomente abaixo:
+                // const newDate = prompt("Nova data (AAAA-MM-DD):", task.date);
+                // if(newDate) task.date = newDate;
+                DB.save();
+            }
+        },
+
         toggle(index) {
             DB.state.tasks[index].done = !DB.state.tasks[index].done;
             DB.save();
@@ -1633,7 +1646,7 @@
             const list = document.getElementById('task-list-container');
             const filter = document.getElementById('task-view-filter').value;
             
-            if(!list) return; // Segurança
+            if(!list) return;
             list.innerHTML = '';
             
             const sortedTasks = [...DB.state.tasks].sort((a, b) => {
@@ -1653,11 +1666,7 @@
                 const prioClass = t.prio === 'HIGH' ? 'p-high' : (t.prio === 'MED' ? 'p-med' : 'p-low');
                 const doneStyle = t.done ? 'text-decoration: line-through; opacity: 0.5;' : '';
                 const icon = t.done ? 'fa-check-square' : 'fa-square';
-                
-                // Ícone do relógio só aparece se tiver hora
                 const timeHTML = t.time ? `<i class="far fa-clock" style="margin-right:4px;"></i>${t.time}` : '';
-
-                // Botão de Agenda
                 const calendarBtn = (t.date && t.time && !t.done) 
                     ? `<i class="fas fa-calendar-plus" onclick="TaskModule.exportToCalendar(${originalIndex})" style="cursor:pointer; color:var(--color-primary); font-size:1.1rem;" title="Agendar"></i>` 
                     : '';
@@ -1681,6 +1690,7 @@
                             
                             <div class="task-actions-row">
                                 ${calendarBtn}
+                                <i class="fas fa-pen" onclick="TaskModule.edit(${originalIndex})" style="cursor:pointer; color:#888; font-size:1rem;" title="Editar"></i>
                                 <i class="fas fa-trash" onclick="TaskModule.delete(${originalIndex})" style="cursor:pointer; color:#666; font-size:1.1rem;"></i>
                             </div>
                         </div>
@@ -1688,13 +1698,11 @@
                 `;
             });
 
-            if(list.innerHTML === '') {
-                list.innerHTML = '<div class="empty-state">Nenhuma tarefa encontrada.</div>';
-            }
+            if(list.innerHTML === '') list.innerHTML = '<div class="empty-state">Nenhuma tarefa encontrada.</div>';
         }
     };
 
-    // --- 6. HABIT MODULE ---
+    // --- 6. HABIT MODULE (COM EDIÇÃO) ---
     const HabitModule = {
         add() {
             const txt = document.getElementById('habit-input').value;
@@ -1705,14 +1713,27 @@
                 DB.save();
             }
         },
+        
+        // --- NOVA FUNÇÃO DE EDITAR ---
+        edit(index) {
+            const habit = DB.state.habits[index];
+            const newTxt = prompt("Editar hábito:", habit.txt);
+            if (newTxt !== null && newTxt.trim() !== "") {
+                habit.txt = newTxt;
+                DB.save();
+            }
+        },
+
         toggle(hIdx, dayIdx) {
             if (!DB.state.habits[hIdx].checks) DB.state.habits[hIdx].checks = Array(7).fill(false);
             DB.state.habits[hIdx].checks[dayIdx] = !DB.state.habits[hIdx].checks[dayIdx];
             DB.save();
         },
+        
         delete(index) {
             if(confirm("Apagar?")) { DB.state.habits.splice(index, 1); DB.save(); }
         },
+        
         render() {
             const container = document.getElementById('habit-list-container');
             const filterEl = document.getElementById('habit-view-filter');
@@ -1744,7 +1765,10 @@
                                 <span style="font-weight:600;">${h.txt}</span>
                                 <span class="cat-badge">${frequencia}</span>
                             </div>
-                            <i class="fas fa-times" onclick="HabitModule.delete(${i})" style="cursor:pointer; color:#444;"></i>
+                            <div style="display:flex; gap:15px;">
+                                <i class="fas fa-pen" onclick="HabitModule.edit(${i})" style="cursor:pointer; color:#888; font-size:0.9rem;" title="Editar"></i>
+                                <i class="fas fa-times" onclick="HabitModule.delete(${i})" style="cursor:pointer; color:#444;"></i>
+                            </div>
                         </div>
                         <div class="habit-days" style="gap:2px;">${checksHtml}</div>
                     </div>
@@ -1754,7 +1778,7 @@
         }
     };
 
-    // --- 7. LIBRARY MODULE ---
+    // --- 7. LIBRARY MODULE (COM EDIÇÃO) ---
     const LibraryModule = {
         add() {
             const title = document.getElementById('book-input').value;
@@ -1766,6 +1790,17 @@
                 DB.save();
             }
         },
+
+        // --- NOVA FUNÇÃO DE EDITAR ---
+        edit(index) {
+            const item = DB.state.library[index];
+            const newTitle = prompt("Editar título:", item.title);
+            if (newTitle !== null && newTitle.trim() !== "") {
+                item.title = newTitle;
+                DB.save();
+            }
+        },
+
         toggle(index) {
             DB.state.library[index].done = !DB.state.library[index].done;
             DB.save();
@@ -1798,6 +1833,7 @@
                                     <span class="cat-badge" style="margin-left:0; font-size:0.6rem;">${meta}</span>
                                 </div>
                             </div>
+                            <button onclick="LibraryModule.edit(${i})" style="background:none; border:none; color:#888; cursor:pointer; margin-right:5px;"><i class="fas fa-pen"></i></button>
                             <button onclick="LibraryModule.delete(${i})" style="background:none; border:none; color:#444; cursor:pointer;"><i class="fas fa-trash"></i></button>
                         </div>
                     </div>
