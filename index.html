@@ -901,15 +901,22 @@
                     </select>
                 </div>
 
+                <div style="height: 180px; margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 12px;">
+                    <canvas id="habitPerformanceChart"></canvas>
+                </div>
+
                 <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
                     <input type="text" id="habit-input" class="form-control" placeholder="Novo hábito..." style="margin-bottom: 0; flex: 2;">
+                    
                     <select id="habit-freq" class="form-control" style="margin-bottom: 0; width: 130px;">
                         <option value="Diário">Diário</option>
                         <option value="Semanal">Semanal</option>
                         <option value="Mensal">Mensal</option>
                     </select>
                     
-                    <button id="btn-habit-save" class="btn-primary" style="width: auto;" onclick="HabitModule.save()">Adicionar</button>
+                    <button id="btn-habit-save" class="btn-primary" style="width: auto; min-width: 120px; margin-bottom: 0;" onclick="HabitModule.save()">
+                        Adicionar
+                    </button>
                 </div>
                 
                 <div id="habit-list-container" class="habit-grid-container"></div>
@@ -1735,37 +1742,27 @@
     const HabitModule = {
         editingIdx: null,
 
-        // Função auxiliar para pegar número da semana
         getWeekNumber(d) {
             d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
             d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
             var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-            var weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
-            return weekNo;
+            return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
         },
 
         checkWeeklyReset() {
             const currentWeek = this.getWeekNumber(new Date());
-            
-            // Se não tem semana salva, salva a atual
             if (!DB.state.lastWeek) {
                 DB.state.lastWeek = currentWeek;
                 DB.save();
                 return;
             }
-
-            // Se a semana mudou, reseta os checks
             if (DB.state.lastWeek !== currentWeek) {
-                if(confirm("Uma nova semana começou! Deseja resetar os checks dos hábitos?")) {
-                    DB.state.habits.forEach(h => {
-                        h.checks = Array(7).fill(false);
-                    });
+                if(confirm("Nova semana iniciada! Deseja resetar os hábitos?")) {
+                    DB.state.habits.forEach(h => { h.checks = Array(7).fill(false); });
                     DB.state.lastWeek = currentWeek;
                     DB.save();
                     this.render();
-                    alert("Hábitos resetados para a nova semana.");
                 } else {
-                    // Se cancelar, atualiza a semana para não perguntar de novo hoje, mas mantém dados
                     DB.state.lastWeek = currentWeek;
                     DB.save();
                 }
@@ -1778,12 +1775,12 @@
             
             if (txt) {
                 if (this.editingIdx !== null) {
-                    // MODO EDIÇÃO
+                    // ATUALIZAR
                     DB.state.habits[this.editingIdx].txt = txt;
                     DB.state.habits[this.editingIdx].freq = freq;
                     this.cancelEdit();
                 } else {
-                    // MODO CRIAÇÃO
+                    // ADICIONAR
                     DB.state.habits.push({ txt, freq, checks: Array(7).fill(false) });
                     document.getElementById('habit-input').value = '';
                 }
@@ -1799,27 +1796,29 @@
             document.getElementById('habit-input').value = h.txt;
             document.getElementById('habit-freq').value = h.freq || 'Diário';
             
-            // Muda o botão
+            // --- AQUI ESTÁ A MÁGICA DO BOTÃO ---
             const btn = document.getElementById('btn-habit-save');
             btn.innerText = 'Atualizar';
-            btn.classList.remove('btn-primary');
-            btn.classList.add('btn-success');
+            // Mantém a classe btn-primary (vermelha) para tamanho, mas força a cor verde
+            btn.style.backgroundColor = 'var(--color-success)'; 
+            btn.style.borderColor = 'var(--color-success)';
         },
 
         cancelEdit() {
             this.editingIdx = null;
             document.getElementById('habit-input').value = '';
+            
+            // RESETA O BOTÃO
             const btn = document.getElementById('btn-habit-save');
             btn.innerText = 'Adicionar';
-            btn.classList.remove('btn-success');
-            btn.classList.add('btn-primary');
+            btn.style.backgroundColor = ''; // Remove a cor inline (volta pro CSS vermelho)
+            btn.style.borderColor = '';
         },
 
         toggle(hIdx, dayIdx) {
             if (!DB.state.habits[hIdx].checks) DB.state.habits[hIdx].checks = Array(7).fill(false);
             DB.state.habits[hIdx].checks[dayIdx] = !DB.state.habits[hIdx].checks[dayIdx];
             DB.save();
-            // Atualiza o gráfico em tempo real ao clicar
             if(typeof ChartsModule !== 'undefined') ChartsModule.renderHabitPerformance();
         },
         
@@ -1862,9 +1861,9 @@
                                 <span style="font-weight:600; display:block;">${h.txt}</span>
                                 <span class="cat-badge">${frequencia}</span>
                             </div>
-                            <div style="display:flex; gap:10px;">
-                                <i class="fas fa-pen" onclick="HabitModule.edit(${i})" style="cursor:pointer; color:#888; font-size:0.9rem;" title="Editar"></i>
-                                <i class="fas fa-trash" onclick="HabitModule.delete(${i})" style="cursor:pointer; color:#666; font-size:0.9rem;"></i>
+                            <div style="display:flex; gap:15px; align-items: center;">
+                                <i class="fas fa-pen" onclick="HabitModule.edit(${i})" style="cursor:pointer; color:#888; font-size:0.9rem;"></i>
+                                <i class="fas fa-trash" onclick="HabitModule.delete(${i})" style="cursor:pointer; color:#666; font-size:1rem;"></i>
                             </div>
                         </div>
                         <div class="habit-days" style="gap:2px;">${checksHtml}</div>
@@ -2049,7 +2048,82 @@
             DB.state.transactions.forEach(t => { if (t.type === 'income') income += t.val; else expense += t.val; });
             if (this.instances.flow) this.instances.flow.destroy();
             this.instances.flow = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Saídas'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] }, options: { ...this.commonOptions, scales: { y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, x: { grid: { display: false }, ticks: { color: '#fff' } } } } });
-        }
+        },
+        // 2. GRÁFICO DE HÁBITOS (PIZZA / ESTILO ATIVOS)
+        renderHabitPerformance() {
+            const ctx = document.getElementById('habitPerformanceChart');
+            if (!ctx) return;
+
+            let totalChecks = 0;
+            let totalPossible = 0;
+
+            // Calcula o total de bolinhas marcadas vs total de bolinhas existentes
+            DB.state.habits.forEach(h => {
+                if(h.checks) {
+                    totalChecks += h.checks.filter(Boolean).length; // Conta quantos 'true'
+                    totalPossible += 7; // Cada hábito tem 7 dias na semana
+                }
+            });
+
+            // Se não tiver hábitos, mostra um gráfico "vazio" (tudo cinza)
+            // Se tiver, calcula a proporção Concluído vs Pendente
+            const dataValues = totalPossible > 0 
+                ? [totalChecks, totalPossible - totalChecks] 
+                : [0, 1];
+            
+            // Verde para Concluído, Cinza Escuro para Pendente (igual ao fundo do gráfico de ativos)
+            const bgColors = totalPossible > 0 
+                ? ['#10b981', '#333'] 
+                : ['#333', '#333'];
+
+            if (this.instances.habit) this.instances.habit.destroy();
+
+            this.instances.habit = new Chart(ctx, {
+                type: 'doughnut', // Formato de Rosca
+                data: {
+                    labels: ['Concluído', 'Pendente'],
+                    datasets: [{
+                        data: dataValues,
+                        backgroundColor: bgColors,
+                        borderWidth: 0, // Sem borda branca, visual clean
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    ...this.commonOptions,
+                    cutout: '70%', // Rosca mais fina, elegante
+                    layout: {
+                        padding: 0
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right', // Legenda na direita
+                            align: 'center',
+                            labels: {
+                                color: '#eee',
+                                boxWidth: 12, // Quadradinho pequeno
+                                padding: 15,
+                                font: {
+                                    size: 12,
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw;
+                                    const total = context.chart._metasets[context.datasetIndex].total;
+                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%';
+                                    return ` ${context.label}: ${pct} (${val})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        },
     };
 
     window.addEventListener('DOMContentLoaded', () => System.init());
