@@ -716,7 +716,7 @@
                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <span class="card-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             <i class="fas fa-hand-holding-usd" style="margin-right:8px; color:var(--color-success)"></i> 
-                            Receitas Fixas
+                            Receitas Fixas Mensais
                         </span>
                         <button class="card-action-btn" onclick="FixedIncomeModule.cancelEdit()" style="white-space: nowrap;">
                             + Nova / Cancelar
@@ -733,8 +733,8 @@
                                 <option value="" disabled selected>Receber em...</option>
                             </select>
                             <input type="date" id="inc-date" class="form-control" style="margin-bottom:0; flex: 1;">
-                            <button id="btn-save-inc" class="btn-primary" onclick="FixedIncomeModule.save()" style="width: auto; background: var(--color-success); margin-bottom: 0; padding: 0 20px;">
-                                <i class="fas fa-check"></i>
+                            <button id="btn-save-inc" class="btn-primary" onclick="FixedIncomeModule.save()" style="width: auto; background: var(--color-success); margin-bottom: 0; padding: 0 20px; flex: 1;">
+                                Salvar Conta
                             </button>
                         </div>
                     </div>
@@ -763,12 +763,14 @@
                 </div>
 
                 <div class="card col-12">
-                    <div class="card-header">
-                        <span class="card-title">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap;">
+                        <span class="card-title" style="white-space: normal; line-height: 1.2; padding-right: 10px; flex-shrink: 1;">
                             <i class="fas fa-file-invoice-dollar" style="margin-right:8px; color:var(--color-warning)"></i> 
                             Gastos Fixos Mensais
                         </span>
-                        <button class="card-action-btn" onclick="FixedExpensesModule.cancelEdit()">+ Nova / Cancelar</button>
+                        <button class="card-action-btn" onclick="FixedExpensesModule.cancelEdit()" style="white-space: nowrap; flex-shrink: 0;">
+                            + Nova / Cancelar
+                        </button>
                     </div>
 
                     <div id="fixed-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
@@ -1276,9 +1278,8 @@
 
     // --- 3.5 MÓDULO RECEITAS (COM EDIÇÃO COMPLETA) ---
     const FixedIncomeModule = {
-        editingId: null, // Variável para controlar se está editando
+        editingId: null,
 
-        // Função unificada para Salvar ou Atualizar
         save() {
             const name = document.getElementById('inc-name').value;
             const val = parseFloat(document.getElementById('inc-val').value);
@@ -1289,7 +1290,7 @@
                 if(!bankId) return alert("Selecione onde o dinheiro vai cair!");
 
                 if (this.editingId) {
-                    // MODO EDIÇÃO: Atualiza o existente
+                    // MODO EDIÇÃO
                     const item = DB.state.incomes.find(e => e.id === this.editingId);
                     if (item) {
                         item.name = name;
@@ -1297,26 +1298,23 @@
                         item.date = date;
                         item.bankId = bankId;
                     }
-                    this.editingId = null; // Limpa edição
-                    document.getElementById('btn-save-inc').innerHTML = '<i class="fas fa-check"></i>'; // Volta ícone
+                    this.editingId = null;
+                    document.getElementById('btn-save-inc').innerText = 'Salvar Conta'; // Volta ao original
                 } else {
-                    // MODO CRIAÇÃO: Adiciona novo
+                    // MODO CRIAÇÃO
                     DB.state.incomes.push({ id: Date.now(), name, val, date, bankId, received: false });
                 }
 
-                // Limpa e Salva
                 document.getElementById('inc-name').value = '';
                 document.getElementById('inc-val').value = '';
                 DB.save();
                 
-                // Fecha o form apenas se estava aberto e foi salvo
                 const form = document.getElementById('inc-add-form');
                 if (!form.classList.contains('hidden')) form.classList.add('hidden');
                 
             } else { alert("Preencha Nome e Valor."); }
         },
 
-        // Botão para abrir o formulário em modo de edição
         edit(id) {
             const item = DB.state.incomes.find(e => e.id === id);
             if (item) {
@@ -1326,14 +1324,12 @@
                 document.getElementById('inc-date').value = item.date;
                 document.getElementById('inc-bank-select').value = item.bankId;
                 
-                // Muda botão para ícone de atualização
-                document.getElementById('btn-save-inc').innerHTML = '<i class="fas fa-sync-alt"></i>';
+                // MUDA O TEXTO DO BOTÃO PARA "ATUALIZAR CONTA"
+                document.getElementById('btn-save-inc').innerText = 'Atualizar Conta';
                 
-                // Abre o form se estiver fechado
+                // Abre form
                 const form = document.getElementById('inc-add-form');
                 if (form.classList.contains('hidden')) form.classList.remove('hidden');
-                
-                // Scroll suave até o form (opcional)
                 form.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         },
@@ -1342,11 +1338,13 @@
             this.editingId = null;
             document.getElementById('inc-name').value = '';
             document.getElementById('inc-val').value = '';
-            document.getElementById('btn-save-inc').innerHTML = '<i class="fas fa-check"></i>';
+            // VOLTA O TEXTO DO BOTÃO PARA "SALVAR CONTA"
+            document.getElementById('btn-save-inc').innerText = 'Salvar Conta';
             UI.toggle('inc-add-form');
         },
 
         toggle(id) {
+            // ... (Lógica de toggle mantida igual - copie do anterior ou mantenha o que já tem)
             const inc = DB.state.incomes.find(e => e.id === id);
             if (inc) {
                 if (!inc.received) {
@@ -1358,17 +1356,11 @@
                         inc.received = true;
                         bank.balance += inc.val;
                         const today = new Date().toLocaleDateString('pt-BR');
-                        DB.state.transactions.unshift({
-                            id: Date.now(), date: today, desc: `Receita Fixa: ${inc.name}`,
-                            val: inc.val, type: 'income', accName: bank.name
-                        });
+                        DB.state.transactions.unshift({ id: Date.now(), date: today, desc: `Receita Fixa: ${inc.name}`, val: inc.val, type: 'income', accName: bank.name });
                         DB.save();
                     }
                 } else {
-                    if(confirm("Desmarcar recebimento?")) {
-                        inc.received = false;
-                        DB.save();
-                    }
+                    if(confirm("Desmarcar recebimento?")) { inc.received = false; DB.save(); }
                 }
             }
         },
@@ -1381,11 +1373,9 @@
         },
 
         render() {
+            // ... (Lógica de renderização do select e lista mantida igual) ...
             const bankSelect = document.getElementById('inc-bank-select');
-            if (bankSelect && bankSelect.innerHTML === '') { // Preenche só 1 vez ou se vazio
-                // Mantém valor selecionado se estiver editando
-            }
-            // Recarrega opções sempre para garantir sincronia
+            if (bankSelect && bankSelect.innerHTML === '') { /* ... */ } // Use a lógica anterior para não duplicar options
             if (bankSelect) {
                 const current = bankSelect.value;
                 bankSelect.innerHTML = '<option value="" disabled selected>Receber em...</option>';
@@ -1399,7 +1389,6 @@
             const list = document.getElementById('inc-list-container');
             if (!list) return;
             list.innerHTML = '';
-            
             const sorted = [...DB.state.incomes].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
             let total = 0, received = 0;
 
@@ -1433,6 +1422,7 @@
                 `;
             });
 
+            // Resumo
             const remaining = total - received;
             const percent = total > 0 ? (received / total) * 100 : 0;
             const elTotal = document.getElementById('inc-total');
