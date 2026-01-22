@@ -721,11 +721,11 @@
                         <button class="card-action-btn" onclick="UI.toggle('inc-add-form')">+ Nova Receita</button>
                     </div>
 
-                    <div id="inc-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                        <input type="text" id="inc-name" class="form-control" placeholder="Desc." style="margin-bottom:0; flex: 2; min-width: 80px;">
-                        <input type="number" id="inc-val" class="form-control" placeholder="R$" style="margin-bottom:0; flex: 1; min-width: 60px;">
-                        <input type="date" id="inc-date" class="form-control" style="margin-bottom:0; flex: 1.5; min-width: 100px;">
-                        <button class="btn-primary" onclick="FixedIncomeModule.add()" style="width: auto; background: var(--color-success); margin-bottom: 0; padding: 0 15px;">
+                    <div id="inc-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; display: flex; gap: 10px; align-items: center;">
+                        <input type="text" id="inc-name" class="form-control" placeholder="Desc." style="margin-bottom:0; flex: 2;">
+                        <input type="number" id="inc-val" class="form-control" placeholder="R$" style="margin-bottom:0; flex: 1;">
+                        <input type="date" id="inc-date" class="form-control" style="margin-bottom:0; flex: 1.5;">
+                        <button class="btn-primary" onclick="FixedIncomeModule.add()" style="width: auto; background: var(--color-success); margin-bottom: 0; padding: 0 20px;">
                             <i class="fas fa-check"></i>
                         </button>
                     </div>
@@ -742,7 +742,7 @@
                             </div>
                             <div style="text-align: center;">
                                 <small style="color: #888; font-size: 0.7rem;">FALTA</small>
-                                <div style="font-weight: 700; color: #888;" id="inc-remaining">R$ 0.00</div>
+                                <div style="font-weight: 700; color: #666;" id="inc-remaining">R$ 0.00</div>
                             </div>
                         </div>
                         <div style="width:100%; height:4px; background:#222; border-radius:2px; overflow:hidden;">
@@ -1256,7 +1256,7 @@
         }
     };
 
-    // --- 3.5 MÓDULO DE RECEITAS FIXAS (IGUAL GASTOS, MAS PARA ENTRADAS) ---
+    // --- MÓDULO RECEITAS (ATUALIZADO COM RESUMO) ---
     const FixedIncomeModule = {
         add() {
             const name = document.getElementById('inc-name').value;
@@ -1264,48 +1264,34 @@
             const date = document.getElementById('inc-date').value;
 
             if (name && !isNaN(val)) {
-                DB.state.incomes.push({
-                    id: Date.now(),
-                    name, val, date, received: false
-                });
+                DB.state.incomes.push({ id: Date.now(), name, val, date, received: false });
                 document.getElementById('inc-name').value = '';
                 document.getElementById('inc-val').value = '';
                 DB.save();
                 UI.toggle('inc-add-form');
-            } else {
-                alert("Preencha Nome e Valor.");
-            }
+            } else { alert("Preencha Nome e Valor."); }
         },
 
         toggle(id) {
             const inc = DB.state.incomes.find(e => e.id === id);
             if (inc) {
                 if (!inc.received) {
-                    // Tenta achar a conta "Caixa", senão pega a primeira
                     const caixa = DB.state.banks.find(b => b.name.toLowerCase().includes('caixa')) || DB.state.banks[0];
-                    
-                    if(!caixa) return alert("Cadastre uma conta bancária primeiro!");
+                    if(!caixa) return alert("Cadastre a conta Caixa!");
 
                     if (confirm(`Receber R$ ${inc.val.toFixed(2)} na conta ${caixa.name}?`)) {
                         inc.received = true;
                         caixa.balance += inc.val;
-
-                        const today = new Date();
-                        const formattedDate = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth()+1).padStart(2,'0')}/${today.getFullYear()}`;
                         
+                        const today = new Date().toLocaleDateString('pt-BR');
                         DB.state.transactions.unshift({
-                            id: Date.now(),
-                            date: formattedDate,
-                            desc: `Entrada Fixa: ${inc.name}`,
-                            val: inc.val,
-                            type: 'income',
-                            accName: caixa.name
+                            id: Date.now(), date: today, desc: `Entrada Fixa: ${inc.name}`,
+                            val: inc.val, type: 'income', accName: caixa.name
                         });
                         DB.save();
-                        alert("Recebido!");
                     }
                 } else {
-                    if(confirm("Desmarcar como recebido? (Saldo não será alterado).")) {
+                    if(confirm("Desmarcar recebimento? (Saldo não será alterado).")) {
                         inc.received = false;
                         DB.save();
                     }
@@ -1314,7 +1300,7 @@
         },
 
         delete(id) {
-            if(confirm("Remover entrada?")) {
+            if(confirm("Remover?")) {
                 DB.state.incomes = DB.state.incomes.filter(e => e.id !== id);
                 DB.save();
             }
@@ -1326,27 +1312,26 @@
             list.innerHTML = '';
             
             const sorted = [...DB.state.incomes].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-
-            let totalVal = 0, recVal = 0;
+            let total = 0, received = 0;
 
             sorted.forEach(e => {
-                totalVal += e.val;
-                if(e.received) recVal += e.val;
+                total += e.val;
+                if(e.received) received += e.val;
 
-                const statusColor = e.received ? 'var(--color-success)' : '#666'; // Verde se recebeu, Cinza se não
-                const statusIcon = e.received ? 'fa-check-circle' : 'fa-circle';
+                const statusColor = e.received ? 'var(--color-success)' : '#444';
+                const icon = e.received ? 'fa-check-circle' : 'fa-circle';
                 const opacity = e.received ? '0.5' : '1';
-                const dateDisplay = e.date ? `Prev: ${e.date.split('-').reverse().join('/')}` : 'Sem data';
+                const date = e.date ? e.date.split('-').reverse().join('/') : 'S/D';
 
                 list.innerHTML += `
-                    <div class="habit-card-mini fade-in" style="opacity: ${opacity}; border-left: 3px solid ${statusColor}; padding: 15px;">
+                    <div class="habit-card-mini fade-in" style="opacity:${opacity}; border-left:3px solid ${statusColor}; padding:15px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div style="display:flex; align-items:center; gap:15px;">
-                                <i class="far ${statusIcon}" onclick="FixedIncomeModule.toggle(${e.id})" style="color:${statusColor}; cursor:pointer; font-size:1.5rem;"></i>
+                                <i class="far ${icon}" onclick="FixedIncomeModule.toggle(${e.id})" style="color:${e.received ? 'var(--color-success)' : '#666'}; cursor:pointer; font-size:1.5rem;"></i>
                                 <div>
                                     <span style="font-weight:600; display:block;">${e.name}</span>
                                     <span style="color:var(--color-success); font-weight:bold;">+ R$ ${e.val.toFixed(2)}</span>
-                                    <small style="color:#888; display:block;">${dateDisplay}</small>
+                                    <small style="color:#888; display:block;">${date} &bull; Caixa</small>
                                 </div>
                             </div>
                             <i class="fas fa-trash" onclick="FixedIncomeModule.delete(${e.id})" style="cursor:pointer; color:#666; font-size:1.1rem;"></i>
@@ -1355,23 +1340,23 @@
                 `;
             });
 
-            // ATUALIZA RESUMO (IGUAL GASTOS)
-            const remaining = totalVal - recVal;
-            const percent = totalVal > 0 ? (recVal / totalVal) * 100 : 0;
+            // ATUALIZA O PAINEL DE RESUMO
+            const remaining = total - received;
+            const percent = total > 0 ? (received / total) * 100 : 0;
             
             const elTotal = document.getElementById('inc-total');
             const elRec = document.getElementById('inc-received');
             const elRem = document.getElementById('inc-remaining');
             const elBar = document.getElementById('inc-progress-bar');
-            
-            if (elTotal) {
-                elTotal.innerText = `R$ ${totalVal.toFixed(2)}`;
-                elRec.innerText = `R$ ${recVal.toFixed(2)}`;
+
+            if(elTotal) {
+                elTotal.innerText = `R$ ${total.toFixed(2)}`;
+                elRec.innerText = `R$ ${received.toFixed(2)}`;
                 elRem.innerText = `R$ ${remaining.toFixed(2)}`;
                 elBar.style.width = `${percent}%`;
             }
 
-            if(list.innerHTML === '') list.innerHTML = '<div class="empty-state">Nenhuma entrada cadastrada.</div>';
+            if(list.innerHTML === '') list.innerHTML = '<div class="empty-state">Nenhuma receita fixa.</div>';
         }
     };
 
@@ -1766,7 +1751,7 @@
         }
     };
 
-    // --- 8. CHARTS MODULE (ATUALIZADO: LETRAS MAIORES E HÁBITOS EM PIZZA) ---
+    // --- 8. CHARTS MODULE (CORRIGIDO: NOMES CURTOS E INICIALIZAÇÃO) ---
     const ChartsModule = {
         instances: {},
         
@@ -1776,7 +1761,7 @@
                 this.renderDist(); 
                 this.renderFlow();
                 this.renderHabitPerformance(); 
-            }, 50);
+            }, 100);
         },
 
         commonOptions: {
@@ -1786,13 +1771,28 @@
             plugins: { legend: { display: false } }
         },
 
-        // 1. GRÁFICO DE ATIVOS (BANCOS) - LETRA E BOTÃO MAIORES
         renderDist() {
             const ctx = document.getElementById('distChart');
             if (!ctx) return;
-            const labels = DB.state.banks.map(b => b.name);
+            
+            // LÓGICA PARA ENCURTAR NOMES (Para não cortar no mobile)
+            const labels = DB.state.banks.map(b => {
+                if (b.name === 'Banco do Brasil') return 'BB';
+                if (b.name === 'Caixa Econômica') return 'Caixa';
+                if (b.name === 'Nubank') return 'Nu';
+                return b.name.substring(0, 10); // Corta se for muito longo
+            });
+            
             const values = DB.state.banks.map(b => b.balance);
-            const colors = labels.map(n => n==='Nubank'?'#820ad1':(n==='Inter'?'#ff7a00':(n==='Banco do Brasil'?'#fce300':'#005ca9')));
+            // Cores fixas para manter padrão
+            const colors = DB.state.banks.map(b => {
+                const n = b.name.toLowerCase();
+                if(n.includes('nubank')) return '#820ad1';
+                if(n.includes('inter')) return '#ff7a00';
+                if(n.includes('brasil') || n.includes('bb')) return '#fce300';
+                if(n.includes('caixa')) return '#005ca9';
+                return '#333';
+            });
             
             if (this.instances.dist) this.instances.dist.destroy();
             
@@ -1811,123 +1811,57 @@
                     cutout: '60%', 
                     plugins: { 
                         legend: { 
-                            display: true, // Garante que a legenda apareça
+                            display: true, 
                             position: 'right', 
                             labels: { 
                                 color: '#eee', 
-                                boxWidth: 25,  // AUMENTADO (Era 20)
-                                padding: 25,   // AUMENTADO
-                                font: { 
-                                    size: 16,  // AUMENTADO (Letra maior)
-                                    weight: 'bold'
-                                }
-                            },
-                            onClick: (e, legendItem, legend) => {
-                                const index = legendItem.datasetIndex;
-                                const ci = legend.chart;
-                                if (ci.isDatasetVisible(index)) {
-                                    ci.hide(index);
-                                    legendItem.hidden = true;
-                                } else {
-                                    ci.show(index);
-                                    legendItem.hidden = false;
-                                }
+                                boxWidth: 20, 
+                                padding: 15,
+                                font: { size: 14, weight: 'bold' } 
                             }
                         } 
                     } 
                 } 
             });
         },
-
-        // 2. GRÁFICO DE HÁBITOS (AGORA EM PIZZA/ROSCA)
+        
+        // ... (Mantenha as outras funções: renderHabitPerformance, renderRadar, renderFlow igual estava antes)
         renderHabitPerformance() {
-            const ctx = document.getElementById('habitPerformanceChart');
-            if (!ctx) return;
-
-            let totalChecks = 0;
-            let totalPossible = 0;
-
-            DB.state.habits.forEach(h => {
-                if(h.checks) {
-                    totalChecks += h.checks.filter(Boolean).length;
-                    totalPossible += 7;
-                }
-            });
-
-            // Se não tiver hábitos, mostra gráfico vazio
-            const dataValues = totalPossible > 0 ? [totalChecks, totalPossible - totalChecks] : [0, 1];
-            const bgColors = totalPossible > 0 ? ['#10b981', '#333'] : ['#333', '#333'];
-            const labels = ['Concluído', 'Pendente'];
-
-            if (this.instances.habit) this.instances.habit.destroy();
-
-            this.instances.habit = new Chart(ctx, {
-                type: 'doughnut', // IGUAL AO DE ATIVOS
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: dataValues,
-                        backgroundColor: bgColors,
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    ...this.commonOptions,
-                    cutout: '70%',
-                    plugins: {
-                        legend: { 
-                            display: true, 
-                            position: 'right', 
-                            labels: { 
-                                color: '#ccc', 
-                                boxWidth: 20, 
-                                font: { size: 12 } 
-                            } 
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const val = context.raw;
-                                    const total = context.chart._metasets[context.datasetIndex].total;
-                                    const pct = total > 0 ? ((val / total) * 100).toFixed(1) + '%' : '0%';
-                                    return ` ${context.label}: ${pct}`;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
+             // ... (use o código do gráfico de Pizza que te mandei na resposta anterior)
+             const ctx = document.getElementById('habitPerformanceChart');
+             if (!ctx) return;
+             // ... Copie o código do gráfico de pizza aqui ...
+             // Se não tiver, me avise que mando de novo só esse pedaço
+             // (Vou incluir simplificado para garantir que funcione):
+             let totalChecks = 0; let totalPossible = 0;
+             DB.state.habits.forEach(h => { if(h.checks) { totalChecks += h.checks.filter(Boolean).length; totalPossible += 7; } });
+             const dataValues = totalPossible > 0 ? [totalChecks, totalPossible - totalChecks] : [0, 1];
+             const bgColors = totalPossible > 0 ? ['#10b981', '#333'] : ['#333', '#333'];
+             if (this.instances.habit) this.instances.habit.destroy();
+             this.instances.habit = new Chart(ctx, { type: 'doughnut', data: { labels: ['Feito', 'Falta'], datasets: [{ data: dataValues, backgroundColor: bgColors, borderWidth: 0 }] }, options: { ...this.commonOptions, cutout: '70%', plugins: { legend: { display: true, position: 'right', labels: { color: '#ccc', boxWidth: 15 } } } } });
         },
 
-        // ... (Mantenha renderRadar e renderFlow iguais ao anterior) ...
         renderRadar() {
-            const ctx = document.getElementById('radarChart');
-            if (!ctx) return;
-            const tasksTotal = DB.state.tasks.length || 1;
-            const tasksDone = DB.state.tasks.filter(t => t.done).length;
-            const taskScore = (tasksDone / tasksTotal) * 100;
-            const data = {
-                labels: ['Tarefas', 'Hábitos', 'Finanças', 'Estudo', 'Foco'],
-                datasets: [{
-                    label: 'Nível', data: [taskScore, 60, 85, 70, 90],
-                    backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444', borderWidth: 1
-                }]
-            };
-            if (this.instances.radar) this.instances.radar.destroy();
-            this.instances.radar = new Chart(ctx, { type: 'radar', data, options: { ...this.commonOptions, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false, backdropColor: 'transparent' } } } } });
+             // ... Código padrão do Radar ...
+             const ctx = document.getElementById('radarChart'); if (!ctx) return;
+             const tasksTotal = DB.state.tasks.length || 1; const tasksDone = DB.state.tasks.filter(t => t.done).length; const taskScore = (tasksDone / tasksTotal) * 100;
+             const data = { labels: ['Tarefas', 'Hábitos', 'Finanças', 'Estudo', 'Foco'], datasets: [{ label: 'Nível', data: [taskScore, 60, 85, 70, 90], backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444', borderWidth: 1 }] };
+             if (this.instances.radar) this.instances.radar.destroy();
+             this.instances.radar = new Chart(ctx, { type: 'radar', data, options: { ...this.commonOptions, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false, backdropColor: 'transparent' } } } } });
         },
+
         renderFlow() {
-            const ctx = document.getElementById('flowChart');
-            if (!ctx) return;
-            let income = 0, expense = 0;
-            DB.state.transactions.forEach(t => { if (t.type === 'income') income += t.val; else expense += t.val; });
-            if (this.instances.flow) this.instances.flow.destroy();
-            this.instances.flow = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Saídas'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] }, options: { ...this.commonOptions, scales: { y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, x: { grid: { display: false }, ticks: { color: '#fff' } } } } });
+             // ... Código padrão do Fluxo ...
+             const ctx = document.getElementById('flowChart'); if (!ctx) return;
+             let income = 0, expense = 0; DB.state.transactions.forEach(t => { if (t.type === 'income') income += t.val; else expense += t.val; });
+             if (this.instances.flow) this.instances.flow.destroy();
+             this.instances.flow = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Saídas'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] }, options: { ...this.commonOptions, scales: { y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, x: { grid: { display: false }, ticks: { color: '#fff' } } } } });
         }
     };
 
-    // --- BOOTSTRAP ---
-    window.addEventListener('DOMContentLoaded', () => {
+    // --- 9. CORREÇÃO DA INICIALIZAÇÃO (Para os gráficos aparecerem sempre) ---
+    // Substitua o final do seu script por isto:
+    window.addEventListener('load', () => {
         System.init();
     });
 </script>
