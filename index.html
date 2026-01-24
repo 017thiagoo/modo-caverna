@@ -386,6 +386,13 @@
             transition: transform 0.1s; /* Resposta rápida */
         }
 
+        /* Animação forçada via JS para garantir que funcione */
+        .mob-link.animate-click i {
+            transform: scale(0.8);
+            color: var(--color-primary);
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
         /* Trava o efeito elástico da página inteira no iOS */
         html, body {
             height: 100%;
@@ -2309,6 +2316,25 @@
     };
 
     window.addEventListener('DOMContentLoaded', () => System.init());
+
+    // --- 9. MOBILE ANIMATION FIX (FORÇA FEEDBACK TÁTIL) ---
+    document.addEventListener('touchstart', function() {}, {passive: true}); // Habilita :active no iOS
+
+    // Adiciona animação manual ao clicar nos botões do mobile
+    document.querySelectorAll('.mob-link').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            // Remove a classe 'animate-click' de todos
+            document.querySelectorAll('.mob-link').forEach(b => b.classList.remove('animate-click'));
+            
+            // Adiciona na atual para disparar a animação
+            this.classList.add('animate-click');
+            
+            // Remove depois de 300ms para poder clicar de novo
+            setTimeout(() => {
+                this.classList.remove('animate-click');
+            }, 300);
+        });
+    });
 </script>
 </body>
 </html>
