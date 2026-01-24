@@ -528,6 +528,15 @@
                 width: 100% !important; /* Largura total */
                 margin-bottom: 0 !important;
             }
+
+            /* Ajuste específico para botões da Biblioteca no Mobile */
+            #lib-btns-wrapper {
+                flex-direction: column !important;
+            }
+            #lib-btns-wrapper button {
+                width: 100% !important;
+                margin-bottom: 0 !important;
+            }
         }
         
         /* --- AJUSTE DESKTOP (PC) --- */
@@ -1111,18 +1120,33 @@
                     </select>
                 </div>
 
-                <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
-                    <input type="text" id="book-input" class="form-control" placeholder="Título..." style="margin-bottom: 0; flex: 2;">
-                    <select id="book-type" class="form-control" style="width: 100px; margin-bottom: 0;">
-                        <option value="book">Livro</option>
-                        <option value="course">Curso</option>
-                    </select>
-                    <select id="book-freq" class="form-control" style="width: 110px; margin-bottom: 0;">
-                        <option value="Diário">Diário</option>
-                        <option value="Semanal">Semanal</option>
-                        <option value="Mensal">Mensal</option>
-                    </select>
-                    <button class="btn-primary" style="width: auto;" onclick="LibraryModule.add()">Adicionar</button>
+                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05);">
+                    
+                    <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="text" id="lib-title" class="form-control" placeholder="Nome do Livro ou Curso..." style="margin-bottom: 0; flex: 2;">
+                        <select id="lib-type" class="form-control" style="width: 110px; margin-bottom: 0;">
+                            <option value="book">Livro</option>
+                            <option value="course">Curso</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <input type="text" id="lib-note" class="form-control" placeholder="Onde parei? (ex: Pág 42, Aula 3...)" style="margin-bottom: 0; flex: 2;">
+                        <select id="lib-freq" class="form-control" style="width: 110px; margin-bottom: 0;">
+                            <option value="Diário">Diário</option>
+                            <option value="Semanal">Semanal</option>
+                            <option value="Mensal">Mensal</option>
+                        </select>
+                    </div>
+
+                    <div id="lib-btns-wrapper" style="display: flex; gap: 10px;">
+                        <button id="btn-lib-save" class="btn-primary" style="width: 100%; height: 55px; font-size: 1rem; font-weight: 700; background-color: var(--color-primary);" onclick="LibraryModule.save()">
+                            Adicionar
+                        </button>
+                        <button id="btn-lib-cancel" class="btn-danger hidden" style="width: 100px; height: 55px; font-size: 1rem; font-weight: 700;" onclick="LibraryModule.cancelEdit()">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                    </div>
                 </div>
                 
                 <div id="library-list-container"></div>
@@ -2085,36 +2109,92 @@
         }
     };
 
-    // --- 7. LIBRARY MODULE (COM EDIÇÃO) ---
+    // --- 7. LIBRARY MODULE (COM EDIÇÃO COMPLETA E ANOTAÇÕES) ---
     const LibraryModule = {
-        add() {
-            const title = document.getElementById('book-input').value;
-            const type = document.getElementById('book-type').value;
-            const freq = document.getElementById('book-freq').value;
+        editingIndex: null,
+
+        save() {
+            const title = document.getElementById('lib-title').value;
+            const type = document.getElementById('lib-type').value;
+            const freq = document.getElementById('lib-freq').value;
+            const note = document.getElementById('lib-note').value; // Novo campo
+
             if(title) {
-                DB.state.library.push({ title, type, freq, done: false });
-                document.getElementById('book-input').value = '';
+                if (this.editingIndex !== null) {
+                    // --- MODO EDIÇÃO ---
+                    const item = DB.state.library[this.editingIndex];
+                    item.title = title;
+                    item.type = type;
+                    item.freq = freq;
+                    item.note = note;
+                    
+                    this.cancelEdit();
+                } else {
+                    // --- MODO CRIAÇÃO ---
+                    DB.state.library.push({ title, type, freq, note, done: false });
+                }
+
+                // Limpar campos
+                document.getElementById('lib-title').value = '';
+                document.getElementById('lib-note').value = '';
+                
                 DB.save();
+                this.render();
+            } else {
+                alert("Digite o título.");
             }
         },
 
-        // --- NOVA FUNÇÃO DE EDITAR ---
         edit(index) {
             const item = DB.state.library[index];
-            const newTitle = prompt("Editar título:", item.title);
-            if (newTitle !== null && newTitle.trim() !== "") {
-                item.title = newTitle;
-                DB.save();
+            if (item) {
+                this.editingIndex = index;
+                
+                // Preenche o formulário
+                document.getElementById('lib-title').value = item.title;
+                document.getElementById('lib-type').value = item.type;
+                document.getElementById('lib-freq').value = item.freq || 'Diário';
+                document.getElementById('lib-note').value = item.note || ''; // Preenche a nota
+
+                // Ajusta botões
+                const btnSave = document.getElementById('btn-lib-save');
+                btnSave.innerText = 'Salvar Alterações';
+                btnSave.style.backgroundColor = 'var(--color-success)';
+                
+                document.getElementById('btn-lib-cancel').classList.remove('hidden');
+                
+                // Rola para o formulário
+                document.getElementById('lib-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+        },
+
+        cancelEdit() {
+            this.editingIndex = null;
+            document.getElementById('lib-title').value = '';
+            document.getElementById('lib-note').value = '';
+            
+            const btnSave = document.getElementById('btn-lib-save');
+            btnSave.innerText = 'Adicionar';
+            btnSave.style.backgroundColor = 'var(--color-primary)';
+            
+            document.getElementById('btn-lib-cancel').classList.add('hidden');
         },
 
         toggle(index) {
             DB.state.library[index].done = !DB.state.library[index].done;
             DB.save();
+            this.render();
         },
+
         delete(i) {
-            if(confirm("Remover?")) { DB.state.library.splice(i, 1); DB.save(); }
+            if(confirm("Remover da biblioteca?")) { 
+                if (this.editingIndex === i) this.cancelEdit();
+                DB.state.library.splice(i, 1); 
+                DB.save(); 
+                this.render();
+            }
         },
+
         render() {
             const list = document.getElementById('library-list-container');
             const filterEl = document.getElementById('lib-view-filter');
@@ -2122,13 +2202,22 @@
             const filter = filterEl ? filterEl.value : 'all';
             list.innerHTML = '';
 
+            let hasItems = false;
+
             DB.state.library.forEach((item, i) => {
                 if (filter !== 'all' && item.freq !== filter) return;
+                hasItems = true;
+                
                 const iconType = item.type === 'book' ? 'fa-book' : 'fa-laptop-code';
                 const meta = item.freq || 'Geral';
                 const titleClass = item.done ? 'item-done' : '';
                 const checkIcon = item.done ? 'fa-check-circle' : 'fa-circle';
                 
+                // Exibe a nota se existir
+                const noteDisplay = item.note 
+                    ? `<div style="font-size:0.75rem; color:#ef4444; margin-top:2px; font-family:'JetBrains Mono';"><i class="fas fa-bookmark" style="font-size:0.7rem; margin-right:4px;"></i>${item.note}</div>` 
+                    : '';
+
                 list.innerHTML += `
                     <div class="task-item fade-in">
                         <div style="display:flex; align-items:center; gap:10px; width:100%;">
@@ -2137,16 +2226,21 @@
                                 <i class="fas ${iconType}" style="color:var(--color-primary); opacity:0.8;"></i>
                                 <div>
                                     <span class="${titleClass}" style="display:block; font-weight:500;">${item.title}</span>
-                                    <span class="cat-badge" style="margin-left:0; font-size:0.6rem;">${meta}</span>
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <span class="cat-badge" style="margin-left:0; font-size:0.6rem;">${meta}</span>
+                                    </div>
+                                    ${noteDisplay}
                                 </div>
                             </div>
-                            <button onclick="LibraryModule.edit(${i})" style="background:none; border:none; color:#888; cursor:pointer; margin-right:5px;"><i class="fas fa-pen"></i></button>
-                            <button onclick="LibraryModule.delete(${i})" style="background:none; border:none; color:#444; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                            <div style="display:flex; gap:10px;">
+                                <i class="fas fa-pen" onclick="LibraryModule.edit(${i})" style="cursor:pointer; color:#888; font-size:0.9rem;" title="Editar"></i>
+                                <i class="fas fa-trash" onclick="LibraryModule.delete(${i})" style="cursor:pointer; color:#666; font-size:1rem;"></i>
+                            </div>
                         </div>
                     </div>
                 `;
             });
-            if(list.innerHTML === '') list.innerHTML = '<div class="empty-state">Biblioteca vazia.</div>';
+            if(!hasItems) list.innerHTML = '<div class="empty-state">Biblioteca vazia.</div>';
         }
     };
 
