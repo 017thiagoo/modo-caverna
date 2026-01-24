@@ -1027,10 +1027,6 @@
                         <option value="Mensal">Mensais</option>
                     </select>
                 </div>
-
-                <div style="height: 180px; margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 12px;">
-                    <canvas id="taskPerformanceChart"></canvas>
-                </div>
                 
                 <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05);">
                     
@@ -1807,11 +1803,9 @@
         }
     };
 
-    // --- 5. TASK MODULE (COM EDIÇÃO COMPLETA) ---
+    // --- 5. TASK MODULE (COM EDIÇÃO) ---
     const TaskModule = {
-        editingIndex: null,
-
-        save() {
+        add() {
             const desc = document.getElementById('task-input').value;
             const date = document.getElementById('task-date').value;
             const time = document.getElementById('task-time').value;
@@ -1819,81 +1813,33 @@
             const freq = document.getElementById('task-freq').value;
 
             if (desc) {
-                if (this.editingIndex !== null) {
-                    // --- ATUALIZAR ---
-                    const t = DB.state.tasks[this.editingIndex];
-                    t.desc = desc;
-                    t.date = date;
-                    t.time = time;
-                    t.prio = prio;
-                    t.freq = freq;
-                    
-                    this.cancelEdit(); // Sai do modo edição
-                } else {
-                    // --- CRIAR ---
-                    DB.state.tasks.push({ desc, date, time, prio, freq, done: false });
-                }
-
-                // Limpa campos principais (mantendo data se preferir)
+                DB.state.tasks.push({ desc, date, time, prio, freq, done: false });
                 document.getElementById('task-input').value = '';
-                document.getElementById('task-time').value = '';
-                
                 DB.save();
-                this.render();
-            } else {
-                alert("Digite a descrição da tarefa.");
             }
         },
-
+        
+        // --- NOVA FUNÇÃO DE EDITAR ---
         edit(index) {
             const task = DB.state.tasks[index];
-            if (task) {
-                this.editingIndex = index;
-
-                // Preenche TODOS os campos
-                document.getElementById('task-input').value = task.desc;
-                document.getElementById('task-date').value = task.date;
-                document.getElementById('task-time').value = task.time;
-                document.getElementById('task-prio').value = task.prio;
-                document.getElementById('task-freq').value = task.freq || 'Geral';
-
-                // Ajusta botões
-                const btnSave = document.getElementById('btn-task-save');
-                btnSave.innerText = 'Salvar Alterações';
-                btnSave.style.backgroundColor = 'var(--color-success)';
-                
-                document.getElementById('btn-task-cancel').classList.remove('hidden');
-
-                // Rola até o formulário
-                document.getElementById('task-input').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const newDesc = prompt("Editar nome da tarefa:", task.desc);
+            if (newDesc !== null && newDesc.trim() !== "") {
+                task.desc = newDesc;
+                // Opcional: Se quiser editar data também, descomente abaixo:
+                // const newDate = prompt("Nova data (AAAA-MM-DD):", task.date);
+                // if(newDate) task.date = newDate;
+                DB.save();
             }
-        },
-
-        cancelEdit() {
-            this.editingIndex = null;
-            document.getElementById('task-input').value = '';
-            document.getElementById('task-time').value = '';
-            
-            const btnSave = document.getElementById('btn-task-save');
-            btnSave.innerText = 'Adicionar';
-            btnSave.style.backgroundColor = 'var(--color-primary)';
-            
-            document.getElementById('btn-task-cancel').classList.add('hidden');
         },
 
         toggle(index) {
             DB.state.tasks[index].done = !DB.state.tasks[index].done;
             DB.save();
-            this.render();
         },
         
         delete(index) {
-            if(confirm("Excluir tarefa?")) {
-                if (this.editingIndex === index) this.cancelEdit();
-                DB.state.tasks.splice(index, 1);
-                DB.save();
-                this.render();
-            }
+            DB.state.tasks.splice(index, 1);
+            DB.save();
         },
 
         exportToCalendar(index) {
@@ -1904,7 +1850,7 @@
                 'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
                 `DTSTART:${start}`, `DTEND:${start}`,
                 `SUMMARY:Caverna: ${t.desc}`, `DESCRIPTION:Prio: ${t.prio}`,
-                'BEGIN:VALARM', 'TRIGGER:-PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Lembrete', 'END:VALARM',
+                'BEGIN:VALARM', 'TRIGGER:-PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Reminder', 'END:VALARM',
                 'END:VEVENT', 'END:VCALENDAR'
             ].join('\n');
             const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
@@ -1917,18 +1863,13 @@
         },
         
         render() {
-            if(typeof ChartsModule !== 'undefined') ChartsModule.renderTaskPerformance();
-
             const list = document.getElementById('task-list-container');
             const filter = document.getElementById('task-view-filter').value;
+            
             if(!list) return;
             list.innerHTML = '';
             
-            // Cria cópia com índice original para ordenação não quebrar edições
-            const sortedTasks = DB.state.tasks.map((t, i) => ({...t, originalIndex: i}));
-            
-            // Ordenação (Prioridade > Hora)
-            sortedTasks.sort((a, b) => {
+            const sortedTasks = [...DB.state.tasks].sort((a, b) => {
                 const pWeight = { 'HIGH': 3, 'MED': 2, 'LOW': 1 };
                 if (pWeight[b.prio] !== pWeight[a.prio]) return pWeight[b.prio] - pWeight[a.prio];
                 if (a.time && !b.time) return -1;
@@ -1937,22 +1878,22 @@
                 return 0;
             });
 
-            let hasTask = false;
-
             sortedTasks.forEach((t) => {
+                const originalIndex = DB.state.tasks.indexOf(t);
                 const tarefaFreq = t.freq || 'Geral';
                 if (filter !== 'all' && tarefaFreq !== filter) return;
-                
-                hasTask = true;
+
                 const prioClass = t.prio === 'HIGH' ? 'p-high' : (t.prio === 'MED' ? 'p-med' : 'p-low');
                 const doneStyle = t.done ? 'text-decoration: line-through; opacity: 0.5;' : '';
                 const icon = t.done ? 'fa-check-square' : 'fa-square';
                 const timeHTML = t.time ? `<i class="far fa-clock" style="margin-right:4px;"></i>${t.time}` : '';
-                const calendarBtn = (t.date && t.time && !t.done) ? `<i class="fas fa-calendar-plus" onclick="TaskModule.exportToCalendar(${t.originalIndex})" style="cursor:pointer; color:var(--color-primary); font-size:1.1rem;" title="Agendar"></i>` : '';
+                const calendarBtn = (t.date && t.time && !t.done) 
+                    ? `<i class="fas fa-calendar-plus" onclick="TaskModule.exportToCalendar(${originalIndex})" style="cursor:pointer; color:var(--color-primary); font-size:1.1rem;" title="Agendar"></i>` 
+                    : '';
 
                 list.innerHTML += `
                     <div class="task-item fade-in">
-                        <div style="display:flex; align-items:center; cursor:pointer; flex:1; padding-right:10px;" onclick="TaskModule.toggle(${t.originalIndex})">
+                        <div style="display:flex; align-items:center; cursor:pointer; flex:1; padding-right:10px;" onclick="TaskModule.toggle(${originalIndex})">
                             <i class="far ${icon}" style="margin-right:12px; color:var(--color-primary); font-size:1.4rem;"></i>
                             <div style="width: 100%;">
                                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
@@ -1962,20 +1903,22 @@
                                 <span style="${doneStyle}; display:block; font-weight:500; line-height:1.2;">${t.desc}</span>
                             </div>
                         </div>
+
                         <div class="task-meta-right">
                             <div class="task-date-display">${t.date ? t.date.split('-').reverse().join('/') : ''}</div>
                             <div class="task-time-display">${timeHTML}</div>
+                            
                             <div class="task-actions-row">
                                 ${calendarBtn}
-                                <i class="fas fa-pen" onclick="TaskModule.edit(${t.originalIndex})" style="cursor:pointer; color:#888; font-size:1rem;" title="Editar"></i>
-                                <i class="fas fa-trash" onclick="TaskModule.delete(${t.originalIndex})" style="cursor:pointer; color:#666; font-size:1.1rem;"></i>
+                                <i class="fas fa-pen" onclick="TaskModule.edit(${originalIndex})" style="cursor:pointer; color:#888; font-size:1rem;" title="Editar"></i>
+                                <i class="fas fa-trash" onclick="TaskModule.delete(${originalIndex})" style="cursor:pointer; color:#666; font-size:1.1rem;"></i>
                             </div>
                         </div>
                     </div>
                 `;
             });
 
-            if(!hasTask) list.innerHTML = '<div class="empty-state">Nenhuma tarefa encontrada.</div>';
+            if(list.innerHTML === '') list.innerHTML = '<div class="empty-state">Nenhuma tarefa encontrada.</div>';
         }
     };
 
@@ -2185,27 +2128,21 @@
         }
     };
 
-    // --- 8. CHARTS MODULE (ATUALIZADO COM GRÁFICO DE TAREFAS) ---
+    // --- 8. CHARTS MODULE (VERSÃO FINAL: NOMES CURTOS + 3 CORES HÁBITOS + HOME FIX) ---
     const ChartsModule = {
         instances: {},
         
         renderAll() {
+            // Verifica se o container está visível para evitar erros de renderização
             const dash = document.getElementById('dashboard');
-            
-            // Renderiza gráficos gerais apenas se dashboard estiver visível
-            if (dash && !dash.classList.contains('hidden')) {
-                setTimeout(() => {
-                    this.renderRadar(); 
-                    this.renderDist(); 
-                    this.renderFlow();
-                }, 100);
-            }
+            if (dash && dash.classList.contains('hidden')) return;
 
-            // Renderiza gráficos específicos (Tarefas e Hábitos) sempre que possível
-            // para garantir que apareçam quando navegar para a aba
+            // Renderiza com um pequeno delay para garantir que o CSS aplicou o tamanho
             setTimeout(() => {
+                this.renderRadar(); 
+                this.renderDist(); 
+                this.renderFlow();
                 this.renderHabitPerformance(); 
-                this.renderTaskPerformance(); // <--- NOVO
             }, 100);
         },
 
@@ -2216,12 +2153,25 @@
             plugins: { legend: { display: false } }
         },
 
-        // 1. GRÁFICO DE ATIVOS
+        // 1. GRÁFICO DE ATIVOS (BANCOS) - COM NOMES PERSONALIZADOS
+        // GRÁFICO DE ATIVOS (CORRIGIDO: FONTE MAIOR E SEM NEGRITO)
         renderDist() {
             const ctx = document.getElementById('distChart');
             if (!ctx) return;
-            const labels = DB.state.banks.map(b => b.name.substring(0, 12));
+            
+            // LÓGICA PARA ENCURTAR NOMES
+            const labels = DB.state.banks.map(b => {
+                const n = b.name;
+                if (n.includes('Banco do Brasil')) return 'BB';
+                if (n.includes('Caixa')) return 'Caixa';
+                if (n.includes('Itaú')) return 'Itaú';
+                if (n.includes('BTG')) return 'BTG';
+                return n.substring(0, 12);
+            });
+            
             const values = DB.state.banks.map(b => b.balance);
+            
+            // CORES
             const colors = DB.state.banks.map(b => {
                 const n = b.name.toLowerCase();
                 if(n.includes('itaú') || n.includes('itau')) return '#ec7000';
@@ -2229,74 +2179,95 @@
                 if(n.includes('caixa')) return '#005ca9';
                 return '#333';
             });
+            
             if (this.instances.dist) this.instances.dist.destroy();
-            this.instances.dist = new Chart(ctx, { type: 'doughnut', data: { labels, datasets: [{ data: values.length ? values : [1], backgroundColor: values.length ? colors : ['#333'], borderWidth: 0 }] }, options: { ...this.commonOptions, cutout: '55%', layout: { padding: 10 }, plugins: { legend: { display: true, position: 'bottom', labels: { color: '#eee', boxWidth: 15, padding: 20, font: { size: 14, family: "'Inter', sans-serif" } } } } } });
+            
+            this.instances.dist = new Chart(ctx, { 
+                type: 'doughnut', 
+                data: { 
+                    labels, 
+                    datasets: [{ 
+                        data: values.length ? values : [1], 
+                        backgroundColor: values.length ? colors : ['#333'], 
+                        borderWidth: 0 
+                    }] 
+                }, 
+                options: { 
+                    ...this.commonOptions, 
+                    cutout: '55%', 
+                    layout: { padding: 10 },
+                    plugins: { 
+                        legend: { 
+                            display: true, 
+                            position: 'bottom', 
+                            align: 'center',
+                            labels: { 
+                                color: '#eee', 
+                                boxWidth: 15, 
+                                padding: 20, 
+                                // --- AQUI VOCÊ MEXE NA FONTE ---
+                                font: { 
+                                    size: 18,      // Aumentei o tamanho (era 12)
+                                    weight: 'normal', // Tirei o negrito (era 'bold')
+                                    family: "'Inter', sans-serif"
+                                } 
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw;
+                                    const label = context.label;
+                                    return ` ${label}: R$ ${val.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    } 
+                } 
+            });
         },
 
-        // 2. GRÁFICO DE HÁBITOS
+        // 2. GRÁFICO DE HÁBITOS (3 ESTADOS: FEITO, FALHOU, PENDENTE)
         renderHabitPerformance() {
             const ctx = document.getElementById('habitPerformanceChart');
             if (!ctx) return;
-            const filter = document.getElementById('habit-view-filter') ? document.getElementById('habit-view-filter').value : 'all';
+
+            const filterEl = document.getElementById('habit-view-filter');
+            const currentFilter = filterEl ? filterEl.value : 'all';
             const todayIndex = new Date().getDay();
-            let cDone = 0, cMissed = 0, cPending = 0;
+
+            let countDone = 0;      // Verde
+            let countMissed = 0;    // Vermelho
+            let countPending = 0;   // Cinza
 
             DB.state.habits.forEach(h => {
-                if (filter !== 'all' && h.freq !== filter) return;
+                if (currentFilter !== 'all' && h.freq !== currentFilter) return;
+
                 if(h.checks) {
                     h.checks.forEach((isChecked, dayIndex) => {
-                        if (isChecked) cDone++;
-                        else if (dayIndex < todayIndex) cMissed++;
-                        else cPending++;
+                        if (isChecked) {
+                            countDone++;
+                        } else {
+                            if (dayIndex < todayIndex) countMissed++; // Passou o dia
+                            else countPending++; // Hoje ou futuro
+                        }
                     });
                 }
             });
-            this.renderDoughnut(ctx, 'habit', cDone, cMissed, cPending);
-        },
 
-        // 3. NOVO: GRÁFICO DE TAREFAS (Igual ao de Hábitos)
-        renderTaskPerformance() {
-            const ctx = document.getElementById('taskPerformanceChart');
-            if (!ctx) return;
+            const total = countDone + countMissed + countPending;
+            const dataValues = total > 0 ? [countDone, countMissed, countPending] : [0, 0, 1];
             
-            const filter = document.getElementById('task-view-filter') ? document.getElementById('task-view-filter').value : 'all';
-            const today = new Date().toISOString().split('T')[0];
-            
-            let cDone = 0, cMissed = 0, cPending = 0;
+            // Verde, Vermelho, Cinza
+            const bgColors = total > 0 ? ['#10b981', '#ef4444', '#333'] : ['#333', '#333', '#333'];
+            const labels = ['Concluído', 'Não Realizado', 'Pendente'];
 
-            DB.state.tasks.forEach(t => {
-                const tFreq = t.freq || 'Geral';
-                if (filter !== 'all' && tFreq !== filter) return;
+            if (this.instances.habit) this.instances.habit.destroy();
 
-                if (t.done) {
-                    cDone++; // Verde
-                } else {
-                    // Se não tem data, conta como pendente
-                    if (!t.date) {
-                        cPending++; 
-                    } else if (t.date < today) {
-                        cMissed++; // Vermelho (Atrasado)
-                    } else {
-                        cPending++; // Cinza (No prazo)
-                    }
-                }
-            });
-
-            this.renderDoughnut(ctx, 'task', cDone, cMissed, cPending);
-        },
-
-        // Função auxiliar para desenhar o gráfico Doughnut (Reutilizável)
-        renderDoughnut(ctx, instanceName, done, missed, pending) {
-            const total = done + missed + pending;
-            const dataValues = total > 0 ? [done, missed, pending] : [0, 0, 1];
-            const bgColors = total > 0 ? ['#10b981', '#ef4444', '#333'] : ['#333', '#333', '#333']; // Verde, Vermelho, Cinza
-
-            if (this.instances[instanceName]) this.instances[instanceName].destroy();
-
-            this.instances[instanceName] = new Chart(ctx, {
+            this.instances.habit = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Concluído', 'Atrasado/Falta', 'Pendente'],
+                    labels: labels,
                     datasets: [{
                         data: dataValues,
                         backgroundColor: bgColors,
@@ -2313,31 +2284,40 @@
                             display: true,
                             position: 'right',
                             align: 'center',
-                            labels: { color: '#eee', boxWidth: 12, padding: 10, font: { size: 12, family: "'Inter', sans-serif" } }
+                            labels: {
+                                color: '#eee',
+                                boxWidth: 12,
+                                padding: 10,
+                                font: { 
+                                    size: 16,      // Aumentei o tamanho (era 12)
+                                    weight: 'normal', // Tirei o negrito (era 'bold')
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
                         }
                     }
                 }
             });
         },
 
-        // 4. RADAR
+        // 3. RADAR (MANTIDO IGUAL)
         renderRadar() {
-            const ctx = document.getElementById('radarChart'); if (!ctx) return;
-            const tasksTotal = DB.state.tasks.length || 1; 
-            const tasksDone = DB.state.tasks.filter(t => t.done).length; 
-            const taskScore = (tasksDone / tasksTotal) * 100;
-            const data = { labels: ['Tarefas', 'Hábitos', 'Finanças', 'Estudo', 'Foco'], datasets: [{ label: 'Nível', data: [taskScore, 60, 85, 70, 90], backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444', borderWidth: 1 }] };
-            if (this.instances.radar) this.instances.radar.destroy();
-            this.instances.radar = new Chart(ctx, { type: 'radar', data, options: { ...this.commonOptions, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false, backdropColor: 'transparent' } } } } });
+             const ctx = document.getElementById('radarChart'); if (!ctx) return;
+             const tasksTotal = DB.state.tasks.length || 1; 
+             const tasksDone = DB.state.tasks.filter(t => t.done).length; 
+             const taskScore = (tasksDone / tasksTotal) * 100;
+             const data = { labels: ['Tarefas', 'Hábitos', 'Finanças', 'Estudo', 'Foco'], datasets: [{ label: 'Nível', data: [taskScore, 60, 85, 70, 90], backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444', borderWidth: 1 }] };
+             if (this.instances.radar) this.instances.radar.destroy();
+             this.instances.radar = new Chart(ctx, { type: 'radar', data, options: { ...this.commonOptions, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false, backdropColor: 'transparent' } } } } });
         },
 
-        // 5. FLUXO
+        // 4. FLUXO DE CAIXA (MANTIDO IGUAL)
         renderFlow() {
-            const ctx = document.getElementById('flowChart'); if (!ctx) return;
-            let income = 0, expense = 0; 
-            DB.state.transactions.forEach(t => { if (t.type === 'income') income += t.val; else expense += t.val; });
-            if (this.instances.flow) this.instances.flow.destroy();
-            this.instances.flow = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Saídas'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] }, options: { ...this.commonOptions, scales: { y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, x: { grid: { display: false }, ticks: { color: '#fff' } } } } });
+             const ctx = document.getElementById('flowChart'); if (!ctx) return;
+             let income = 0, expense = 0; 
+             DB.state.transactions.forEach(t => { if (t.type === 'income') income += t.val; else expense += t.val; });
+             if (this.instances.flow) this.instances.flow.destroy();
+             this.instances.flow = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Saídas'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] }, options: { ...this.commonOptions, scales: { y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, x: { grid: { display: false }, ticks: { color: '#fff' } } } } });
         }
     };
 
