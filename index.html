@@ -1109,8 +1109,7 @@
         </div>
 
         <div id="biblioteca" class="view-section hidden fade-in">
-            <div class="card card-centralizado">
-                <div class="card-header" style="justify-content: space-between;">
+            <div class="card-header" style="justify-content: space-between;">
                     <span class="card-title">Base de Conhecimento</span>
                     <select id="lib-view-filter" class="form-control" style="width: auto; height: 30px; padding: 0 10px; font-size: 0.8rem;" onchange="LibraryModule.render()">
                         <option value="all">Todos</option>
@@ -1118,6 +1117,10 @@
                         <option value="Semanal">Semanais</option>
                         <option value="Mensal">Mensais</option>
                     </select>
+                </div>
+
+                <div style="height: 280px; margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 12px;">
+                    <canvas id="libraryPerformanceChart"></canvas>
                 </div>
 
                 <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05);">
@@ -2110,7 +2113,7 @@
         }
     };
 
-    // --- 7. LIBRARY MODULE (ATUALIZADO: CURSOS COM GRID SEMANAL + GRÁFICO) ---
+    // --- 7. LIBRARY MODULE (ATUALIZADO: CHECK NOS CURSOS + GRÁFICO) ---
     const LibraryModule = {
         editingIndex: null,
 
@@ -2123,28 +2126,21 @@
 
             if(title) {
                 if (this.editingIndex !== null) {
-                    // Edição
                     const item = DB.state.library[this.editingIndex];
                     item.title = title;
                     item.type = type;
                     item.freq = freq;
                     item.note = note;
                     item.date = date;
-                    // Garante que cursos tenham o array de checks se foi alterado de livro para curso
                     if (type === 'course' && !item.checks) item.checks = Array(7).fill(false);
-                    
                     this.cancelEdit();
                 } else {
-                    // Criação
-                    // Se for curso, cria os 7 dias. Se for livro, apenas status done.
                     const checks = type === 'course' ? Array(7).fill(false) : null;
                     DB.state.library.push({ title, type, freq, note, date, done: false, checks });
                 }
-
                 document.getElementById('lib-title').value = '';
                 document.getElementById('lib-note').value = '';
                 document.getElementById('lib-date').value = '';
-                
                 DB.save();
                 this.render();
             } else {
@@ -2166,7 +2162,6 @@
                 btnSave.innerText = 'Salvar Alterações';
                 btnSave.style.backgroundColor = 'var(--color-success)';
                 document.getElementById('btn-lib-cancel').classList.remove('hidden');
-                
                 document.getElementById('lib-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         },
@@ -2182,21 +2177,16 @@
             document.getElementById('btn-lib-cancel').classList.add('hidden');
         },
 
-        // Toggle Inteligente: Funciona para Livro (Concluir) e Curso (Marcar Dia)
         toggle(index, dayIndex = null) {
             const item = DB.state.library[index];
-            
             if (item.type === 'course' && dayIndex !== null) {
-                // Toggle do dia específico no curso
                 if (!item.checks) item.checks = Array(7).fill(false);
                 item.checks[dayIndex] = !item.checks[dayIndex];
             } else {
-                // Toggle simples (Livro ou Check geral)
                 item.done = !item.done;
             }
-            
             DB.save();
-            this.render(); // Atualiza gráfico e lista
+            this.render();
         },
 
         delete(i) {
@@ -2209,7 +2199,6 @@
         },
 
         render() {
-            // Atualiza o gráfico sempre que renderizar a lista
             if(typeof ChartsModule !== 'undefined') ChartsModule.renderLibraryPerformance();
 
             const list = document.getElementById('library-list-container');
@@ -2217,7 +2206,6 @@
             if(!list) return;
             const filter = filterEl ? filterEl.value : 'all';
             list.innerHTML = '';
-
             const daysLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
             let hasItems = false;
 
@@ -2226,21 +2214,19 @@
                 hasItems = true;
                 
                 const meta = item.freq || 'Geral';
-                // Formata data
+                const isDone = item.done;
+                const checkIcon = isDone ? 'fa-check-circle' : 'fa-circle'; // Ícone principal
+                const titleClass = isDone ? 'item-done' : '';
                 const dateDisplay = item.date ? item.date.split('-').reverse().join('/') : ''; 
                 
-                // Monta info de meta (Data + Nota)
                 let metaInfo = '';
                 if (item.date) metaInfo += `<span style="margin-right:10px;"><i class="far fa-calendar-alt"></i> ${dateDisplay}</span>`;
                 if (item.note) metaInfo += `<span><i class="fas fa-bookmark"></i> ${item.note}</span>`;
                 const metaDisplay = metaInfo ? `<div style="font-size:0.75rem; color:#ef4444; margin-top:4px; font-family:'JetBrains Mono'; display:flex; align-items:center;">${metaInfo}</div>` : '';
 
-
-                // --- RENDERIZAÇÃO TIPO 1: CURSO (Com Grid Semanal) ---
+                // --- CURSO (Com Check Principal + Grid Semanal) ---
                 if (item.type === 'course') {
-                    // Garante que existe array
                     if (!item.checks) item.checks = Array(7).fill(false);
-                    
                     let daysHtml = '';
                     item.checks.forEach((isChecked, d) => {
                         const activeClass = isChecked ? 'checked' : '';
@@ -2254,11 +2240,13 @@
 
                     list.innerHTML += `
                         <div class="habit-card-mini fade-in" style="display:block;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                                <i class="far ${checkIcon}" onclick="LibraryModule.toggle(${i})" style="cursor:pointer; font-size:1.1rem; min-width:20px;"></i>
+                                
                                 <div style="flex:1;">
                                     <div style="display:flex; align-items:center; gap:8px;">
                                         <i class="fas fa-laptop-code" style="color:var(--color-primary);"></i>
-                                        <span style="font-weight:600;">${item.title}</span>
+                                        <span class="${titleClass}" style="font-weight:600;">${item.title}</span>
                                     </div>
                                     ${metaDisplay}
                                 </div>
@@ -2267,16 +2255,12 @@
                                     <i class="fas fa-trash" onclick="LibraryModule.delete(${i})" style="cursor:pointer; color:#666; font-size:1rem;"></i>
                                 </div>
                             </div>
-                            <div class="habit-days" style="gap:2px;">${daysHtml}</div>
+                            <div class="habit-days" style="gap:2px; margin-left: 30px;">${daysHtml}</div>
                         </div>
                     `;
                 } 
-                
-                // --- RENDERIZAÇÃO TIPO 2: LIVRO (Card Simples) ---
+                // --- LIVRO (Card Padrão) ---
                 else {
-                    const titleClass = item.done ? 'item-done' : '';
-                    const checkIcon = item.done ? 'fa-check-circle' : 'fa-circle';
-
                     list.innerHTML += `
                         <div class="task-item fade-in">
                             <div style="display:flex; align-items:center; gap:10px; width:100%;">
@@ -2285,6 +2269,9 @@
                                     <i class="fas fa-book" style="color:var(--color-primary); opacity:0.8;"></i>
                                     <div>
                                         <span class="${titleClass}" style="display:block; font-weight:500;">${item.title}</span>
+                                        <div style="display:flex; align-items:center; gap:6px;">
+                                            <span class="cat-badge" style="margin-left:0; font-size:0.6rem;">${meta}</span>
+                                        </div>
                                         ${metaDisplay}
                                     </div>
                                 </div>
@@ -2297,12 +2284,11 @@
                     `;
                 }
             });
-            
             if(!hasItems) list.innerHTML = '<div class="empty-state">Biblioteca vazia.</div>';
         }
     };
 
-    // --- 8. CHARTS MODULE (ATUALIZADO COM GRÁFICO DA BIBLIOTECA) ---
+    // --- 8. CHARTS MODULE (ATUALIZADO) ---
     const ChartsModule = {
         instances: {},
         
@@ -2318,7 +2304,7 @@
             setTimeout(() => {
                 this.renderHabitPerformance(); 
                 this.renderTaskPerformance();
-                this.renderLibraryPerformance(); // <--- NOVO
+                this.renderLibraryPerformance();
             }, 100);
         },
 
@@ -2374,7 +2360,7 @@
             this.renderDoughnut(ctx, 'task', cDone, cMissed, cPending);
         },
 
-        // --- 4. NOVO: GRÁFICO DA BIBLIOTECA ---
+        // --- GRÁFICO DA BIBLIOTECA (IGUAL HÁBITOS) ---
         renderLibraryPerformance() {
             const ctx = document.getElementById('libraryPerformanceChart');
             if (!ctx) return;
@@ -2389,14 +2375,14 @@
                 if (currentFilter !== 'all' && item.freq !== currentFilter) return;
 
                 if (item.type === 'course' && item.checks) {
-                    // Lógica para Cursos (Baseado nos dias da semana)
+                    // Cursos: Conta os DIAS estudados (igual hábitos)
                     item.checks.forEach((isChecked, dayIndex) => {
                         if (isChecked) cDone++;
                         else if (dayIndex < todayIndex) cMissed++;
                         else cPending++;
                     });
                 } else {
-                    // Lógica para Livros (Concluído vs Pendente)
+                    // Livros: Conta como um item único
                     if (item.done) cDone++;
                     else cPending++;
                 }
