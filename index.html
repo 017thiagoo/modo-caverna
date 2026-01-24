@@ -717,7 +717,7 @@
                 </div>
 
                 <div class="card col-12">
-                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap;">
                         <span class="card-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             <i class="fas fa-hand-holding-usd" style="margin-right:8px; color:var(--color-success)"></i> 
                             Receitas Fixas Mensais
@@ -733,9 +733,6 @@
                             <input type="number" id="inc-val" class="form-control" placeholder="R$" style="margin-bottom:0; flex:1;">
                         </div>
                         <div class="input-group-row" style="display:flex; gap:10px; align-items: center;">
-                            <select id="inc-bank-select" class="form-control" style="margin-bottom:0; flex:1; font-size: 0.85rem;">
-                                <option value="" disabled selected>Receber em...</option>
-                            </select>
                             <input type="date" id="inc-date" class="form-control" style="margin-bottom:0; flex: 1;">
                             <button id="btn-save-inc" class="btn-primary" onclick="FixedIncomeModule.save()" style="width: auto; background: var(--color-success); margin-bottom: 0; padding: 0 20px; flex: 1;">
                                 Salvar Conta
@@ -782,11 +779,13 @@
                             <input type="text" id="fixed-name" class="form-control" placeholder="Nome (ex: Aluguel)" style="margin-bottom:0; flex:2;">
                             <input type="number" id="fixed-val" class="form-control" placeholder="Valor (R$)" style="margin-bottom:0; flex:1;">
                         </div>
-                        <div class="date-time-wrapper" style="margin-bottom: 10px;">
-                            <input type="date" id="fixed-date" class="form-control">
-                            <input type="time" id="fixed-time" class="form-control">
+                        <div class="date-time-wrapper" style="display:flex; gap:10px; align-items: center; margin-bottom: 0;">
+                            <input type="date" id="fixed-date" class="form-control" style="margin-bottom:0; flex:1;">
+                            <input type="time" id="fixed-time" class="form-control" style="margin-bottom:0; width: 80px;">
+                            <button id="btn-save-fix" class="btn-primary" onclick="FixedExpensesModule.save()" style="width: auto; margin-bottom: 0; padding: 0 20px; flex: 1;">
+                                Salvar
+                            </button>
                         </div>
-                        <button id="btn-save-fix" class="btn-primary" onclick="FixedExpensesModule.save()" style="width: 100%;">Salvar Conta</button>
                     </div>
 
                     <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05);">
@@ -1020,20 +1019,25 @@
             this.updateGreeting();
             FinanceModule.init();
             
-            // Garante que o dashboard aparece
-            document.getElementById('dashboard').classList.remove('hidden');
+            // 1. Garante que a Home (dashboard) está visível antes de tudo
+            const dash = document.getElementById('dashboard');
+            if (dash) dash.classList.remove('hidden');
             
-            // Renderiza tudo pela primeira vez
-            this.refreshAll(); 
+            // 2. Renderiza o HTML dos módulos
+            this.refreshAll();
             
-            // Força o desenho dos gráficos com um pequeno atraso para garantir que a tela carregou
+            // 3. Força o desenho dos gráficos com um pequeno delay e redimensionamento
             setTimeout(() => {
-                if(typeof ChartsModule !== 'undefined') ChartsModule.renderAll();
+                if(typeof ChartsModule !== 'undefined') {
+                    // Força o Chart.js a recalcular o tamanho
+                    Object.values(ChartsModule.instances).forEach(chart => {
+                        if(chart) chart.resize();
+                    });
+                    ChartsModule.renderAll();
+                }
             }, 300);
 
             if(typeof HabitModule !== 'undefined') HabitModule.checkWeeklyReset();
-
-            FinanceModule.init();
         },
 
         updateGreeting() {
@@ -1142,7 +1146,15 @@
         addAccount() {
             const name = document.getElementById('bank-select').value;
             const bal = parseFloat(document.getElementById('bank-balance-init').value);
+            
             if (name && !isNaN(bal)) {
+                // VERIFICA DUPLICIDADE
+                const exists = DB.state.banks.some(b => b.name === name);
+                if (exists) {
+                    alert(`A conta ${name} já existe!`);
+                    return;
+                }
+
                 DB.state.banks.push({ id: Date.now(), name, balance: bal });
                 document.getElementById('bank-balance-init').value = '';
                 UI.toggle('bank-add-form');
@@ -1294,7 +1306,7 @@
         }
     };
 
-    // --- 3.5 MÓDULO RECEITAS (COM EDIÇÃO COMPLETA) ---
+    // --- 3.5 MÓDULO RECEITAS (CORRIGIDO: SEM MENU DE BANCO) ---
     const FixedIncomeModule = {
         editingId: null,
 
@@ -1302,11 +1314,8 @@
             const name = document.getElementById('inc-name').value;
             const val = parseFloat(document.getElementById('inc-val').value);
             const date = document.getElementById('inc-date').value;
-            const bankId = parseInt(document.getElementById('inc-bank-select').value);
 
             if (name && !isNaN(val)) {
-                if(!bankId) return alert("Selecione onde o dinheiro vai cair!");
-
                 if (this.editingId) {
                     // MODO EDIÇÃO
                     const item = DB.state.incomes.find(e => e.id === this.editingId);
@@ -1314,13 +1323,12 @@
                         item.name = name;
                         item.val = val;
                         item.date = date;
-                        item.bankId = bankId;
                     }
                     this.editingId = null;
-                    document.getElementById('btn-save-inc').innerText = 'Salvar Conta'; // Volta ao original
+                    document.getElementById('btn-save-inc').innerText = 'Salvar Conta';
                 } else {
-                    // MODO CRIAÇÃO
-                    DB.state.incomes.push({ id: Date.now(), name, val, date, bankId, received: false });
+                    // MODO CRIAÇÃO (Sem bankId)
+                    DB.state.incomes.push({ id: Date.now(), name, val, date, received: false });
                 }
 
                 document.getElementById('inc-name').value = '';
@@ -1340,12 +1348,9 @@
                 document.getElementById('inc-name').value = item.name;
                 document.getElementById('inc-val').value = item.val;
                 document.getElementById('inc-date').value = item.date;
-                document.getElementById('inc-bank-select').value = item.bankId;
                 
-                // MUDA O TEXTO DO BOTÃO PARA "ATUALIZAR CONTA"
-                document.getElementById('btn-save-inc').innerText = 'Atualizar Conta';
+                document.getElementById('btn-save-inc').innerText = 'Atualizar';
                 
-                // Abre form
                 const form = document.getElementById('inc-add-form');
                 if (form.classList.contains('hidden')) form.classList.remove('hidden');
                 form.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1356,29 +1361,31 @@
             this.editingId = null;
             document.getElementById('inc-name').value = '';
             document.getElementById('inc-val').value = '';
-            // VOLTA O TEXTO DO BOTÃO PARA "SALVAR CONTA"
             document.getElementById('btn-save-inc').innerText = 'Salvar Conta';
             UI.toggle('inc-add-form');
         },
 
         toggle(id) {
-            // ... (Lógica de toggle mantida igual - copie do anterior ou mantenha o que já tem)
             const inc = DB.state.incomes.find(e => e.id === id);
             if (inc) {
                 if (!inc.received) {
-                    let bank = DB.state.banks.find(b => b.id === inc.bankId);
-                    if (!bank) bank = DB.state.banks.find(b => b.name.toLowerCase().includes('caixa')) || DB.state.banks[0];
-                    if(!bank) return alert("Nenhum banco encontrado!");
+                    // LÓGICA AUTOMÁTICA: Busca o Itaú
+                    const itau = DB.state.banks.find(b => b.name.toLowerCase().includes('itaú') || b.name.toLowerCase().includes('itau'));
+                    if(!itau) return alert("Cadastre a conta Itaú primeiro!");
 
-                    if (confirm(`Confirmar entrada de R$ ${inc.val.toFixed(2)} na conta ${bank.name}?`)) {
+                    if (confirm(`Receber R$ ${inc.val.toFixed(2)} no Itaú?`)) {
                         inc.received = true;
-                        bank.balance += inc.val;
+                        itau.balance += inc.val;
+                        
                         const today = new Date().toLocaleDateString('pt-BR');
-                        DB.state.transactions.unshift({ id: Date.now(), date: today, desc: `Receita Fixa: ${inc.name}`, val: inc.val, type: 'income', accName: bank.name });
+                        DB.state.transactions.unshift({ id: Date.now(), date: today, desc: `Receita Fixa: ${inc.name}`, val: inc.val, type: 'income', accName: itau.name });
                         DB.save();
                     }
                 } else {
-                    if(confirm("Desmarcar recebimento?")) { inc.received = false; DB.save(); }
+                    if(confirm("Desmarcar recebimento? (Saldo não será alterado).")) {
+                        inc.received = false;
+                        DB.save();
+                    }
                 }
             }
         },
@@ -1391,19 +1398,6 @@
         },
 
         render() {
-            // ... (Lógica de renderização do select e lista mantida igual) ...
-            const bankSelect = document.getElementById('inc-bank-select');
-            if (bankSelect && bankSelect.innerHTML === '') { /* ... */ } // Use a lógica anterior para não duplicar options
-            if (bankSelect) {
-                const current = bankSelect.value;
-                bankSelect.innerHTML = '<option value="" disabled selected>Receber em...</option>';
-                DB.state.banks.forEach(b => {
-                    const opt = document.createElement('option');
-                    opt.value = b.id; opt.innerText = b.name; bankSelect.appendChild(opt);
-                });
-                if(current) bankSelect.value = current;
-            }
-
             const list = document.getElementById('inc-list-container');
             if (!list) return;
             list.innerHTML = '';
@@ -1413,8 +1407,7 @@
             sorted.forEach(e => {
                 total += e.val;
                 if(e.received) received += e.val;
-                const linkedBank = DB.state.banks.find(b => b.id === e.bankId);
-                const bankName = linkedBank ? linkedBank.name : 'Indefinido';
+
                 const statusColor = 'var(--color-success)'; 
                 const icon = e.received ? 'fa-check-circle' : 'fa-circle';
                 const opacity = e.received ? '0.5' : '1';
@@ -1428,11 +1421,11 @@
                                 <div>
                                     <span style="font-weight:600; display:block;">${e.name}</span>
                                     <span style="color:var(--color-success); font-weight:bold;">+ R$ ${e.val.toFixed(2)}</span>
-                                    <small style="color:#888; display:block; margin-top:2px;">Prev: ${date} • ${bankName}</small>
+                                    <small style="color:#888; display:block; margin-top:2px;">Prev: ${date}</small>
                                 </div>
                             </div>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <i class="fas fa-pen" onclick="FixedIncomeModule.edit(${e.id})" style="cursor:pointer; color:#888; font-size:0.9rem;" title="Editar"></i>
+                            <div style="display:flex; gap:10px;">
+                                <i class="fas fa-pen" onclick="FixedIncomeModule.edit(${e.id})" style="cursor:pointer; color:#888; font-size:0.9rem;"></i>
                                 <i class="fas fa-trash" onclick="FixedIncomeModule.delete(${e.id})" style="cursor:pointer; color:#666; font-size:1.1rem;"></i>
                             </div>
                         </div>
@@ -1440,7 +1433,6 @@
                 `;
             });
 
-            // Resumo
             const remaining = total - received;
             const percent = total > 0 ? (received / total) * 100 : 0;
             const elTotal = document.getElementById('inc-total');
