@@ -1453,7 +1453,7 @@
         }
     };
 
-    // --- 4. FIXED EXPENSES MODULE (COM EDIÇÃO COMPLETA) ---
+    // --- 4. FIXED EXPENSES MODULE (CORRIGIDO: PAGAMENTO AUTOMÁTICO ITAÚ) ---
     const FixedExpensesModule = {
         editingId: null,
 
@@ -1465,7 +1465,6 @@
 
             if (name && !isNaN(val)) {
                 if (this.editingId) {
-                    // MODO EDIÇÃO
                     const item = DB.state.fixed.find(e => e.id === this.editingId);
                     if (item) {
                         item.name = name;
@@ -1476,7 +1475,6 @@
                     this.editingId = null;
                     document.getElementById('btn-save-fix').innerText = 'Salvar Conta';
                 } else {
-                    // MODO CRIAÇÃO
                     DB.state.fixed.push({ id: Date.now(), name, val, date, time, paid: false });
                 }
 
@@ -1499,10 +1497,8 @@
                 document.getElementById('fixed-date').value = item.date;
                 document.getElementById('fixed-time').value = item.time;
                 
-                // Muda botão
                 document.getElementById('btn-save-fix').innerText = 'Atualizar Conta';
                 
-                // Abre form
                 const form = document.getElementById('fixed-add-form');
                 if (form.classList.contains('hidden')) form.classList.remove('hidden');
                 form.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1521,26 +1517,28 @@
             const expense = DB.state.fixed.find(e => e.id === id);
             if (expense) {
                 if (!expense.paid) {
-                    const banks = DB.state.banks;
-                    if (banks.length === 0) return alert("Cadastre um banco!");
-                    let menu = `Pagar R$ ${expense.val.toFixed(2)} com qual banco?\n\n`;
-                    banks.forEach((b, index) => { menu += `${index + 1}. ${b.name} (R$ ${b.balance.toFixed(2)})\n`; });
-                    const input = prompt(menu + "\nNúmero:");
-                    if (input === null) return;
-                    const bank = banks[parseInt(input) - 1];
-                    if (bank) {
+                    // --- AUTOMÁTICO: BUSCA ITAÚ ---
+                    const itau = DB.state.banks.find(b => b.name.toLowerCase().includes('itaú') || b.name.toLowerCase().includes('itau'));
+                    
+                    if (!itau) return alert("Cadastre a conta Itaú primeiro!");
+
+                    if (confirm(`Pagar R$ ${expense.val.toFixed(2)} pelo Itaú?`)) {
                         expense.paid = true;
-                        bank.balance -= expense.val;
+                        itau.balance -= expense.val;
+                        
                         const today = new Date().toLocaleDateString('pt-BR');
                         DB.state.transactions.unshift({
-                            id: Date.now(), date: today, desc: `Pgto Fixo: ${expense.name}`,
-                            val: expense.val, type: 'expense', accName: bank.name
+                            id: Date.now(),
+                            date: today,
+                            desc: `Pgto Fixo: ${expense.name}`,
+                            val: expense.val,
+                            type: 'expense',
+                            accName: itau.name
                         });
                         DB.save();
-                        alert(`Pago via ${bank.name}!`);
-                    } else { alert("Inválido."); }
+                    }
                 } else {
-                    if(confirm("Desmarcar pagamento?")) {
+                    if(confirm("Desmarcar pagamento? (O valor não será estornado automaticamente).")) {
                         expense.paid = false;
                         DB.save();
                     }
@@ -1556,13 +1554,23 @@
         },
         
         exportToCalendar(id) {
-            // ... (Mantenha sua função de calendário igual) ...
             const t = DB.state.fixed.find(e => e.id === id);
             if (!t || !t.date || !t.time) return alert("Defina Data e Hora!");
             const start = t.date.replace(/-/g, '') + 'T' + t.time.replace(/:/g, '') + '00';
-            const icsContent = [ 'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', `DTSTART:${start}`, `DTEND:${start}`, `SUMMARY:Pagar: ${t.name}`, `DESCRIPTION:Valor: R$ ${t.val}`, 'BEGIN:VALARM', 'TRIGGER:-PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Reminder', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR' ].join('\n');
+            const icsContent = [
+                'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+                `DTSTART:${start}`, `DTEND:${start}`,
+                `SUMMARY:Pagar: ${t.name}`, `DESCRIPTION:Valor: R$ ${t.val}`,
+                'BEGIN:VALARM', 'TRIGGER:-PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Reminder', 'END:VALARM',
+                'END:VEVENT', 'END:VCALENDAR'
+            ].join('\n');
             const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-            const link = document.createElement('a'); link.href = window.URL.createObjectURL(blob); link.setAttribute('download', `pagar_${t.name}.ics`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.setAttribute('download', `pagar_${t.name}.ics`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         },
 
         render() {
@@ -1609,6 +1617,7 @@
 
             const remaining = totalVal - paidVal;
             const percent = totalVal > 0 ? (paidVal / totalVal) * 100 : 0;
+            
             const elTotal = document.getElementById('fixed-total');
             if (elTotal) {
                 elTotal.innerText = `R$ ${totalVal.toFixed(2)}`;
@@ -1616,6 +1625,7 @@
                 document.getElementById('fixed-remaining').innerText = `R$ ${remaining.toFixed(2)}`;
                 document.getElementById('fixed-progress-bar').style.width = `${percent}%`;
             }
+
             if(list.innerHTML === '') list.innerHTML = '<div class="empty-state">Nenhuma despesa fixa.</div>';
         }
     };
