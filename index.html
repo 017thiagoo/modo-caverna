@@ -537,6 +537,48 @@
                 width: 100% !important;
                 margin-bottom: 0 !important;
             }
+
+            /* --- SCROLL HORIZONTAL PARA OS DIAS DO HÁBITO --- */
+        .habit-days {
+            display: flex;
+            gap: 12px; /* Espaço entre os dias */
+            overflow-x: auto; /* Permite rolar para o lado */
+            padding-bottom: 12px; /* Espaço para a barra de rolagem */
+            margin-top: 15px;
+            white-space: nowrap; /* Garante que fiquem em linha */
+            
+            /* Estilo da barra de rolagem (fina e discreta) */
+            scrollbar-width: thin;
+            scrollbar-color: #333 transparent;
+        }
+
+        /* Barra de rolagem para Webkit (Chrome/Safari) */
+        .habit-days::-webkit-scrollbar { height: 6px; }
+        .habit-days::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); border-radius: 3px; }
+        .habit-days::-webkit-scrollbar-thumb { background-color: #333; border-radius: 3px; }
+
+        .habit-day-col {
+            flex: 0 0 auto; /* Impede que encolha */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 60px; /* Largura mínima para a data não quebrar feio */
+        }
+
+        .habit-day-label {
+            font-size: 0.65rem;
+            color: #888;
+            font-family: 'JetBrains Mono', monospace;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        /* Destaque visual para o dia de HOJE */
+        .habit-day-col.today .habit-day-label {
+            color: var(--color-primary);
+            font-weight: 800;
+        }
         }
         
         /* --- AJUSTE DESKTOP (PC) --- */
@@ -1968,35 +2010,46 @@
         }
     };
 
-    // --- 6. HABIT MODULE (ATUALIZADO) ---
+    // --- 6. HABIT MODULE (ATUALIZADO: LINHA DO TEMPO ATÉ 2026) ---
     const HabitModule = {
         editingIdx: null,
 
-        getWeekNumber(d) {
-            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-            var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-            return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+        // Função que gera a lista de datas de Hoje até Fim de 2026
+        generateDateRange() {
+            const days = [];
+            const curr = new Date(); // Começa Hoje
+            // Zera as horas para comparar datas corretamente
+            curr.setHours(0,0,0,0);
+            
+            const end = new Date('2026-12-31T23:59:59');
+            
+            const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            
+            // Cria um loop dia a dia
+            while (curr <= end) {
+                const d = curr.getDate().toString().padStart(2, '0');
+                const m = (curr.getMonth() + 1).toString().padStart(2, '0');
+                // const y = curr.getFullYear(); // Opcional se quiser economizar espaço visual
+                
+                // Formato de chave única para salvar: "2024-01-24"
+                // Importante usar o formato ISO (YYYY-MM-DD) para consistência
+                // Ajuste de fuso horário simples:
+                const offset = curr.getTimezoneOffset() * 60000;
+                const localISOTime = (new Date(curr.getTime() - offset)).toISOString().slice(0,10);
+
+                days.push({
+                    label: `${weekDays[curr.getDay()]}<br>${d}/${m}`, // Ex: Sáb <br> 24/01
+                    key: localISOTime // Chave para salvar no banco
+                });
+                
+                // Avança 1 dia
+                curr.setDate(curr.getDate() + 1);
+            }
+            return days;
         },
 
         checkWeeklyReset() {
-            const currentWeek = this.getWeekNumber(new Date());
-            if (!DB.state.lastWeek) {
-                DB.state.lastWeek = currentWeek;
-                DB.save();
-                return;
-            }
-            if (DB.state.lastWeek !== currentWeek) {
-                if(confirm("Nova semana iniciada! Deseja resetar os hábitos?")) {
-                    DB.state.habits.forEach(h => { h.checks = Array(7).fill(false); });
-                    DB.state.lastWeek = currentWeek;
-                    DB.save();
-                    this.render();
-                } else {
-                    DB.state.lastWeek = currentWeek;
-                    DB.save();
-                }
-            }
+            // (Não é mais necessário resetar semanalmente, pois é contínuo)
         },
 
         save() {
@@ -2009,11 +2062,13 @@
                     DB.state.habits[this.editingIdx].freq = freq;
                     this.cancelEdit();
                 } else {
-                    DB.state.habits.push({ txt, freq, checks: Array(7).fill(false) });
+                    // checks agora será um Objeto (Dicionário) em vez de Array
+                    // Ex: { "2024-01-24": true, "2024-01-25": false }
+                    DB.state.habits.push({ txt, freq, checks: {} }); 
                     document.getElementById('habit-input').value = '';
                 }
                 DB.save();
-                this.render(); // Atualiza a lista e o gráfico ao salvar
+                this.render();
             } else {
                 alert("Digite o nome do hábito.");
             }
@@ -2040,12 +2095,24 @@
             btn.style.borderColor = '';
         },
 
-        toggle(hIdx, dayIdx) {
-            if (!DB.state.habits[hIdx].checks) DB.state.habits[hIdx].checks = Array(7).fill(false);
-            DB.state.habits[hIdx].checks[dayIdx] = !DB.state.habits[hIdx].checks[dayIdx];
+        toggle(hIdx, dateKey) {
+            // Garante que é um objeto
+            if (!DB.state.habits[hIdx].checks || Array.isArray(DB.state.habits[hIdx].checks)) {
+                DB.state.habits[hIdx].checks = {};
+            }
+
+            // Inverte o valor (se undefined vira true, se true vira false)
+            if (DB.state.habits[hIdx].checks[dateKey]) {
+                delete DB.state.habits[hIdx].checks[dateKey]; // Remove se desmarcar (economia)
+            } else {
+                DB.state.habits[hIdx].checks[dateKey] = true;
+            }
+
             DB.save();
-            // Atualiza o gráfico imediatamente ao clicar
             if(typeof ChartsModule !== 'undefined') ChartsModule.renderHabitPerformance();
+            // Renderiza só para atualizar o visual do check
+            // (Idealmente renderizaríamos só o elemento, mas render() é rápido o suficiente aqui)
+            this.render(); 
         },
         
         delete(index) {
@@ -2053,38 +2120,46 @@
                 if(this.editingIdx === index) this.cancelEdit();
                 DB.state.habits.splice(index, 1); 
                 DB.save(); 
-                this.render(); // Atualiza gráfico ao deletar
+                this.render();
             }
         },
         
         render() {
+            // Atualiza gráfico
+            if(typeof ChartsModule !== 'undefined') ChartsModule.renderHabitPerformance();
+
             const container = document.getElementById('habit-list-container');
             const filterEl = document.getElementById('habit-view-filter');
             if(!container) return;
             
             const filter = filterEl ? filterEl.value : 'all';
-            
-            // --- AQUI ESTÁ O SEGREDO: Atualiza o gráfico quando renderiza a lista ---
-            if(typeof ChartsModule !== 'undefined') {
-                ChartsModule.renderHabitPerformance();
-            }
-
             container.innerHTML = '';
-            const daysLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+
+            const dateList = this.generateDateRange(); 
+            // Para performance, vamos renderizar apenas os primeiros 30-60 dias inicialmente
+            // ou deixar rolar. Como é texto simples, até uns 100 dias renderiza bem rápido.
+            // Vou renderizar os próximos 60 dias para a UI não ficar pesada demais no celular.
+            // Se quiser ver até 2026 mesmo, aumente o slice.
+            const visibleDays = dateList.slice(0, 365); // Mostra 1 ano (365 dias)
 
             DB.state.habits.forEach((h, i) => {
                 if (filter !== 'all' && h.freq !== filter) return;
                 
                 const frequencia = h.freq || 'Diário';
                 let checksHtml = '';
-                if (!h.checks) h.checks = Array(7).fill(false);
+                
+                // Converte checks antigos (Array) para Objeto se necessário (Migração)
+                if (Array.isArray(h.checks)) h.checks = {};
+                if (!h.checks) h.checks = {};
 
-                h.checks.forEach((isChecked, d) => {
-                    const activeClass = isChecked ? 'checked' : '';
+                visibleDays.forEach((dateObj, idx) => {
+                    const isChecked = h.checks[dateObj.key] ? 'checked' : '';
+                    const isToday = idx === 0 ? 'today' : ''; // O primeiro da lista é Hoje
+
                     checksHtml += `
-                        <div class="habit-day-col">
-                            <span class="habit-day-label">${daysLabels[d]}</span>
-                            <div class="day-check ${activeClass}" onclick="HabitModule.toggle(${i}, ${d})"></div>
+                        <div class="habit-day-col ${isToday}">
+                            <span class="habit-day-label">${dateObj.label}</span>
+                            <div class="day-check ${isChecked}" onclick="HabitModule.toggle(${i}, '${dateObj.key}')"></div>
                         </div>
                     `;
                 });
@@ -2101,7 +2176,7 @@
                                 <i class="fas fa-trash" onclick="HabitModule.delete(${i})" style="cursor:pointer; color:#666; font-size:1rem;"></i>
                             </div>
                         </div>
-                        <div class="habit-days" style="gap:2px;">${checksHtml}</div>
+                        <div class="habit-days">${checksHtml}</div>
                     </div>
                 `;
             });
@@ -2343,77 +2418,42 @@
             });
         },
 
-        // 2. GRÁFICO DE HÁBITOS (ATUALIZADO: LEGENDA EM BAIXO)
         renderHabitPerformance() {
-            const ctx = document.getElementById('habitPerformanceChart');
-            if (!ctx) return;
-
+            const ctx = document.getElementById('habitPerformanceChart'); if (!ctx) return;
             const filterEl = document.getElementById('habit-view-filter');
             const currentFilter = filterEl ? filterEl.value : 'all';
-            const todayIndex = new Date().getDay();
-
-            let countDone = 0;      // Verde
-            let countMissed = 0;    // Vermelho
-            let countPending = 0;   // Cinza
+            
+            // Datas para comparação
+            const todayStr = (new Date()).toISOString().slice(0,10); // "2024-01-24"
+            
+            let cDone = 0, cMissed = 0, cPending = 0;
 
             DB.state.habits.forEach(h => {
                 if (currentFilter !== 'all' && h.freq !== currentFilter) return;
+                
+                // Se for objeto (novo formato)
+                if (h.checks && !Array.isArray(h.checks)) {
+                    // Contamos quantos checks TRUE existem (Concluídos)
+                    cDone += Object.values(h.checks).filter(val => val === true).length;
+                    
+                    // Para simplificar o gráfico de "Pendentes/Missed" num sistema contínuo,
+                    // podemos considerar apenas o dia de HOJE. 
+                    // Se hoje não fez -> Pendente. Se fez -> Done.
+                    // (Calcular missed histórico exigiria iterar todos os dias passados)
+                    
+                    if (!h.checks[todayStr]) cPending++; 
 
-                if(h.checks) {
+                } else if (Array.isArray(h.checks)) {
+                    // Legado (Array de 7 dias) - Mantém compatibilidade se houver dados antigos
+                    const todayIndex = new Date().getDay();
                     h.checks.forEach((isChecked, dayIndex) => {
-                        if (isChecked) {
-                            countDone++;
-                        } else {
-                            if (dayIndex < todayIndex) countMissed++; // Passou o dia
-                            else countPending++; // Hoje ou futuro
-                        }
+                        if (isChecked) cDone++; else if (dayIndex < todayIndex) cMissed++; else cPending++;
                     });
                 }
             });
-
-            const total = countDone + countMissed + countPending;
-            const dataValues = total > 0 ? [countDone, countMissed, countPending] : [0, 0, 1];
             
-            // Verde, Vermelho, Cinza
-            const bgColors = total > 0 ? ['#10b981', '#ef4444', '#333'] : ['#333', '#333', '#333'];
-            const labels = ['Concluído', 'Não Realizado', 'Pendente'];
-
-            if (this.instances.habit) this.instances.habit.destroy();
-
-            this.instances.habit = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: dataValues,
-                        backgroundColor: bgColors,
-                        borderWidth: 0,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    ...this.commonOptions,
-                    cutout: '60%', // Deixei um pouco mais grosso para ficar bonito maior
-                    layout: { padding: 10 }, // Espaço interno
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'bottom', // <--- AQUI: MOVEU PARA BAIXO
-                            align: 'center',
-                            labels: {
-                                color: '#eee',
-                                boxWidth: 12,
-                                padding: 20, // Mais espaço entre o gráfico e a legenda
-                                font: {
-                                    size: 15, // Tamanho da letra
-                                    weight: 'bold', // Negrito para leitura melhor
-                                    family: "'Inter', sans-serif"
-                                }
-                            }
-                        }
-                    }
-                }
-            });
+            // Se cDone for 0, o gráfico fica cinza. 
+            this.renderDoughnut(ctx, 'habit', cDone, cMissed, cPending);
         },
 
         // 3. RADAR (MANTIDO IGUAL)
