@@ -2227,7 +2227,7 @@
             });
         },
 
-        // 2. GRÁFICO DE HÁBITOS (3 ESTADOS: FEITO, FALHOU, PENDENTE)
+        // 2. GRÁFICO DE HÁBITOS (ATUALIZADO: LEGENDA EM BAIXO)
         renderHabitPerformance() {
             const ctx = document.getElementById('habitPerformanceChart');
             if (!ctx) return;
@@ -2277,20 +2277,20 @@
                 },
                 options: {
                     ...this.commonOptions,
-                    cutout: '70%',
-                    layout: { padding: 0 },
+                    cutout: '60%', // Deixei um pouco mais grosso para ficar bonito maior
+                    layout: { padding: 10 }, // Espaço interno
                     plugins: {
                         legend: {
                             display: true,
-                            position: 'right',
+                            position: 'bottom', // <--- AQUI: MOVEU PARA BAIXO
                             align: 'center',
                             labels: {
                                 color: '#eee',
                                 boxWidth: 12,
-                                padding: 10,
-                                font: { 
-                                    size: 16,      // Aumentei o tamanho (era 12)
-                                    weight: 'normal', // Tirei o negrito (era 'bold')
+                                padding: 20, // Mais espaço entre o gráfico e a legenda
+                                font: {
+                                    size: 15, // Tamanho da letra
+                                    weight: 'normal', // Negrito para leitura melhor
                                     family: "'Inter', sans-serif"
                                 }
                             }
