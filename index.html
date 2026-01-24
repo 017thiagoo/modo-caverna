@@ -55,10 +55,9 @@
             --color-danger: #ef4444;
             
             /* Variáveis Bancárias */
-            --brand-nubank: #820ad1;
-            --brand-inter: #ff7a00;
-            --brand-bb: #fce300;
             --brand-caixa: #005ca9;
+            --brand-itau: #ec7000;
+            --brand-btg: #00295F;
 
             --glass-border: 1px solid rgba(255, 255, 255, 0.06);
             --radius-sm: 6px;
@@ -190,14 +189,20 @@
         4. FINANCEIRO
         ========================================= */
         .bank-card {
-            background: linear-gradient(145deg, #18181b, #050505); border: 1px solid rgba(255,255,255,0.05);
-            padding: 1.2rem; border-radius: var(--radius-md); margin-bottom: 1rem; display: flex;
-            justify-content: space-between; align-items: center; border-left: 4px solid #333;
+            background: linear-gradient(145deg, #18181b, #050505); 
+            border: 1px solid rgba(255,255,255,0.05);
+            padding: 1.2rem; 
+            border-radius: var(--radius-md); 
+            margin-bottom: 1rem; 
+            display: flex;
+            justify-content: space-between; 
+            align-items: center; 
+            border-left: 4px solid #333;
         }
-        .bank-nubank { border-left-color: var(--brand-nubank); }
-        .bank-inter { border-left-color: var(--brand-inter); }
-        .bank-bb { border-left-color: var(--brand-bb); }
+        /* Novas Classes */
         .bank-caixa { border-left-color: var(--brand-caixa); }
+        .bank-itau { border-left-color: var(--brand-itau); }
+        .bank-btg { border-left-color: var(--brand-btg); }
         .bank-info h4 { font-size: 0.8rem; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: 4px; }
         .bank-balance { font-size: 1.3rem; font-weight: 700; }
 
@@ -701,10 +706,9 @@
                     </div>
                     <div id="bank-add-form" class="hidden" style="margin-bottom: 20px; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px;">
                         <select id="bank-select" class="form-control">
-                            <option value="Nubank">Nubank</option>
-                            <option value="Inter">Banco Inter</option>
-                            <option value="Banco do Brasil">Banco do Brasil</option>
-                            <option value="Caixa">Caixa Econômica</option>
+                            <option value="Caixa Econômica">Caixa Econômica</option>
+                            <option value="Itaú">Itaú</option>
+                            <option value="BTG Pactual Banking">BTG Pactual Banking</option>
                         </select>
                         <input type="number" id="bank-balance-init" class="form-control" placeholder="Saldo Inicial (R$)">
                         <button class="btn-primary" onclick="FinanceModule.addAccount()">Salvar</button>
@@ -1738,7 +1742,7 @@
         }
     };
 
-    // --- 6. HABIT MODULE (EDIÇÃO COMPLETA + RESET SEMANAL) ---
+    // --- 6. HABIT MODULE (ATUALIZADO) ---
     const HabitModule = {
         editingIdx: null,
 
@@ -1775,16 +1779,15 @@
             
             if (txt) {
                 if (this.editingIdx !== null) {
-                    // ATUALIZAR
                     DB.state.habits[this.editingIdx].txt = txt;
                     DB.state.habits[this.editingIdx].freq = freq;
                     this.cancelEdit();
                 } else {
-                    // ADICIONAR
                     DB.state.habits.push({ txt, freq, checks: Array(7).fill(false) });
                     document.getElementById('habit-input').value = '';
                 }
                 DB.save();
+                this.render(); // Atualiza a lista e o gráfico ao salvar
             } else {
                 alert("Digite o nome do hábito.");
             }
@@ -1796,10 +1799,8 @@
             document.getElementById('habit-input').value = h.txt;
             document.getElementById('habit-freq').value = h.freq || 'Diário';
             
-            // --- AQUI ESTÁ A MÁGICA DO BOTÃO ---
             const btn = document.getElementById('btn-habit-save');
             btn.innerText = 'Atualizar';
-            // Mantém a classe btn-primary (vermelha) para tamanho, mas força a cor verde
             btn.style.backgroundColor = 'var(--color-success)'; 
             btn.style.borderColor = 'var(--color-success)';
         },
@@ -1807,11 +1808,9 @@
         cancelEdit() {
             this.editingIdx = null;
             document.getElementById('habit-input').value = '';
-            
-            // RESETA O BOTÃO
             const btn = document.getElementById('btn-habit-save');
             btn.innerText = 'Adicionar';
-            btn.style.backgroundColor = ''; // Remove a cor inline (volta pro CSS vermelho)
+            btn.style.backgroundColor = ''; 
             btn.style.borderColor = '';
         },
 
@@ -1819,6 +1818,7 @@
             if (!DB.state.habits[hIdx].checks) DB.state.habits[hIdx].checks = Array(7).fill(false);
             DB.state.habits[hIdx].checks[dayIdx] = !DB.state.habits[hIdx].checks[dayIdx];
             DB.save();
+            // Atualiza o gráfico imediatamente ao clicar
             if(typeof ChartsModule !== 'undefined') ChartsModule.renderHabitPerformance();
         },
         
@@ -1827,6 +1827,7 @@
                 if(this.editingIdx === index) this.cancelEdit();
                 DB.state.habits.splice(index, 1); 
                 DB.save(); 
+                this.render(); // Atualiza gráfico ao deletar
             }
         },
         
@@ -1837,7 +1838,7 @@
             
             const filter = filterEl ? filterEl.value : 'all';
             
-            // --- NOVO: ATUALIZA O GRÁFICO BASEADO NO FILTRO SELECIONADO ---
+            // --- AQUI ESTÁ O SEGREDO: Atualiza o gráfico quando renderiza a lista ---
             if(typeof ChartsModule !== 'undefined') {
                 ChartsModule.renderHabitPerformance();
             }
@@ -1846,7 +1847,6 @@
             const daysLabels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
 
             DB.state.habits.forEach((h, i) => {
-                // Aplica o filtro na listagem
                 if (filter !== 'all' && h.freq !== filter) return;
                 
                 const frequencia = h.freq || 'Diário';
@@ -1948,50 +1948,36 @@
         }
     };
 
-    // --- 8. CHARTS MODULE ---
+    // --- 8. CHARTS MODULE (ATUALIZADO COM LÓGICA DE 3 ESTADOS) ---
     const ChartsModule = {
         instances: {},
+        
         renderAll() {
-            setTimeout(() => { this.renderRadar(); this.renderDist(); this.renderFlow(); }, 50);
+            setTimeout(() => { 
+                this.renderRadar(); 
+                this.renderDist(); 
+                this.renderFlow();
+                this.renderHabitPerformance(); 
+            }, 50);
         },
+
         commonOptions: {
-            responsive: true, maintainAspectRatio: false,
+            responsive: true, 
+            maintainAspectRatio: false,
             animation: { duration: 1000, easing: 'easeOutQuart' },
             plugins: { legend: { display: false } }
         },
-        renderRadar() {
-            const ctx = document.getElementById('radarChart');
-            if (!ctx) return;
-            const tasksTotal = DB.state.tasks.length || 1;
-            const tasksDone = DB.state.tasks.filter(t => t.done).length;
-            const taskScore = (tasksDone / tasksTotal) * 100;
-            const data = {
-                labels: ['Tarefas', 'Hábitos', 'Finanças', 'Estudo', 'Foco'],
-                datasets: [{
-                    label: 'Nível', data: [taskScore, 60, 85, 70, 90],
-                    backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444', borderWidth: 1
-                }]
-            };
-            if (this.instances.radar) this.instances.radar.destroy();
-            this.instances.radar = new Chart(ctx, { type: 'radar', data, options: { ...this.commonOptions, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false, backdropColor: 'transparent' } } } } });
-        },
+
+        // GRÁFICO DE ATIVOS
         renderDist() {
             const ctx = document.getElementById('distChart');
             if (!ctx) return;
-            
-            // 1. LÓGICA DE ABREVIAÇÃO (Para caber na direita sem cortar)
             const labels = DB.state.banks.map(b => {
-                const n = b.name;
-                // Abreviar nomes longos conhecidos
-                if (n === 'Banco do Brasil') return 'B. do Brasil'; 
-                if (n === 'Caixa Econômica') return 'Caixa';
-                // Se for outro nome muito longo, corta e põe "..."
-                if (n.length > 14) return n.substring(0, 12) + '...';
-                return n;
+                if (b.name === 'Banco do Brasil') return 'BB';
+                if (b.name === 'Caixa Econômica') return 'Caixa';
+                return b.name.substring(0, 12);
             });
-            
             const values = DB.state.banks.map(b => b.balance);
-            
             const colors = DB.state.banks.map(b => {
                 const n = b.name.toLowerCase();
                 if(n.includes('nubank')) return '#820ad1';
@@ -2005,111 +1991,63 @@
             
             this.instances.dist = new Chart(ctx, { 
                 type: 'doughnut', 
-                data: { 
-                    labels, 
-                    datasets: [{ 
-                        data: values.length ? values : [1], 
-                        backgroundColor: values.length ? colors : ['#333'], 
-                        borderWidth: 0 
-                    }] 
-                }, 
+                data: { labels, datasets: [{ data: values.length ? values : [1], backgroundColor: values.length ? colors : ['#333'], borderWidth: 0 }] }, 
                 options: { 
                     ...this.commonOptions, 
                     cutout: '60%', 
-                    layout: {
-                        padding: 0 // Remove margem extra para ganhar espaço
-                    },
                     plugins: { 
                         legend: { 
                             display: true, 
-                            position: 'right', // Mantido na direita como pediu
-                            align: 'center',   // Centraliza verticalmente
-                            labels: { 
-                                color: '#eee', 
-                                boxWidth: 15,  // Botão colorido um pouco menor para dar espaço ao texto
-                                padding: 17,   // Espaço entre as linhas
-                                font: { 
-                                    size: 15,  // Tamanho equilibrado para mobile
-                                    weight: 'normal',
-                                    family: "'Inter', sans-serif"
-                                }
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    // Mostra o nome completo no tooltip ao segurar o dedo
-                                    const index = context.dataIndex;
-                                    const originalName = DB.state.banks[index].name; 
-                                    const val = context.raw;
-                                    return ` ${originalName}: R$ ${val.toFixed(2)}`;
-                                }
-                            }
-                        }
+                            position: 'bottom', 
+                            labels: { color: '#eee', boxWidth: 15, padding: 15, font: { size: 12, weight: 'bold' } } 
+                        } 
                     } 
                 } 
             });
         },
-        renderFlow() {
-            const ctx = document.getElementById('flowChart');
-            if (!ctx) return;
-            let income = 0, expense = 0;
-            DB.state.transactions.forEach(t => { if (t.type === 'income') income += t.val; else expense += t.val; });
-            if (this.instances.flow) this.instances.flow.destroy();
-            this.instances.flow = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Saídas'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] }, options: { ...this.commonOptions, scales: { y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, x: { grid: { display: false }, ticks: { color: '#fff' } } } } });
-        },
-        // 2. GRÁFICO DE HÁBITOS (PIZZA / ESTILO ATIVOS)
-        // 2. GRÁFICO DE HÁBITOS (3 ESTADOS: FEITO, FALHOU, PENDENTE)
+
+        // --- GRÁFICO DE HÁBITOS INTELIGENTE (AQUI ESTÁ A MUDANÇA) ---
         renderHabitPerformance() {
             const ctx = document.getElementById('habitPerformanceChart');
             if (!ctx) return;
 
-            // 1. Pega o filtro atual selecionado lá no HTML
+            // 1. Pega o filtro selecionado no HTML
             const filterEl = document.getElementById('habit-view-filter');
             const currentFilter = filterEl ? filterEl.value : 'all';
 
-            // 2. Identifica o dia de hoje (0=Dom, 1=Seg, ..., 6=Sab)
+            // 2. Dia de hoje (0=Dom ... 6=Sab)
             const todayIndex = new Date().getDay();
 
-            let countDone = 0;      // Verde
-            let countMissed = 0;    // Vermelho (Não fez e já passou o dia)
-            let countPending = 0;   // Cinza (Ainda dá tempo ou é futuro)
+            let countDone = 0;      // Verde (Feito)
+            let countMissed = 0;    // Vermelho (Não fez e dia já passou)
+            let countPending = 0;   // Cinza (Ainda dá tempo ou dia futuro)
 
-            // 3. Percorre os hábitos
+            // 3. Loop inteligente
             DB.state.habits.forEach(h => {
-                // Aplica o mesmo filtro da lista
+                // Só conta se o hábito pertencer ao filtro atual
                 if (currentFilter !== 'all' && h.freq !== currentFilter) return;
 
                 if(h.checks) {
                     h.checks.forEach((isChecked, dayIndex) => {
                         if (isChecked) {
-                            // Se está marcado, é CONCLUÍDO
                             countDone++;
                         } else {
-                            // Se não está marcado...
                             if (dayIndex < todayIndex) {
-                                // Se o dia já passou (ex: hoje é quarta(3), e estamos olhando terca(2)), é FALHA
-                                countMissed++;
+                                countMissed++; // Dia já passou e não marcou
                             } else {
-                                // Se é hoje ou futuro, é PENDENTE
-                                countPending++;
+                                countPending++; // Hoje ou futuro
                             }
                         }
                     });
                 }
             });
 
-            // Evita gráfico vazio se tudo for zero
             const total = countDone + countMissed + countPending;
-            const dataValues = total > 0 
-                ? [countDone, countMissed, countPending] 
-                : [0, 0, 1]; // Mostra cinza se não tiver nada
+            // Se não tiver dados, mostra gráfico vazio cinza
+            const dataValues = total > 0 ? [countDone, countMissed, countPending] : [0, 0, 1];
             
-            // Cores: Verde (Feito), Vermelho (Falhou), Cinza Escuro (Pendente)
-            const bgColors = total > 0 
-                ? ['#10b981', '#ef4444', '#333'] 
-                : ['#333', '#333', '#333'];
-
+            // Cores: Verde, Vermelho, Cinza Escuro
+            const bgColors = total > 0 ? ['#10b981', '#ef4444', '#333'] : ['#333', '#333', '#333'];
             const labels = ['Concluído', 'Não Realizado', 'Pendente'];
 
             if (this.instances.habit) this.instances.habit.destroy();
@@ -2132,16 +2070,13 @@
                     plugins: {
                         legend: {
                             display: true,
-                            position: 'right',
+                            position: 'right', // Legenda na lateral
                             align: 'center',
                             labels: {
                                 color: '#eee',
                                 boxWidth: 12,
-                                padding: 10, // Um pouco menos de padding para caber 3 itens
-                                font: {
-                                    size: 11, // Fonte levemente menor para caber
-                                    family: "'Inter', sans-serif"
-                                }
+                                padding: 10,
+                                font: { size: 11, family: "'Inter', sans-serif" }
                             }
                         },
                         tooltip: {
@@ -2158,6 +2093,23 @@
                 }
             });
         },
+
+        renderRadar() {
+             const ctx = document.getElementById('radarChart'); if (!ctx) return;
+             const tasksTotal = DB.state.tasks.length || 1; 
+             const tasksDone = DB.state.tasks.filter(t => t.done).length; 
+             const taskScore = (tasksDone / tasksTotal) * 100;
+             const data = { labels: ['Tarefas', 'Hábitos', 'Finanças', 'Estudo', 'Foco'], datasets: [{ label: 'Nível', data: [taskScore, 60, 85, 70, 90], backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444', borderWidth: 1 }] };
+             if (this.instances.radar) this.instances.radar.destroy();
+             this.instances.radar = new Chart(ctx, { type: 'radar', data, options: { ...this.commonOptions, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false, backdropColor: 'transparent' } } } } });
+        },
+
+        renderFlow() {
+             const ctx = document.getElementById('flowChart'); if (!ctx) return;
+             let income = 0, expense = 0; DB.state.transactions.forEach(t => { if (t.type === 'income') income += t.val; else expense += t.val; });
+             if (this.instances.flow) this.instances.flow.destroy();
+             this.instances.flow = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Saídas'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] }, options: { ...this.commonOptions, scales: { y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, x: { grid: { display: false }, ticks: { color: '#fff' } } } } });
+        }
     };
 
     window.addEventListener('DOMContentLoaded', () => System.init());
