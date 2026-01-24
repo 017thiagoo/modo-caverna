@@ -520,6 +520,14 @@
             .btns-financeiro button { width: 100% !important; height: 40px !important; margin-bottom: 0 !important; display: flex; align-items: center; justify-content: center; }
 
             .card-header select { width: 100px !important; height: 35px !important; font-size: 0.8rem !important; margin-bottom: 0 !important; }
+
+            #task-btns-wrapper {
+                flex-direction: column !important; /* Um embaixo do outro */
+            }
+            #task-btns-wrapper button {
+                width: 100% !important; /* Largura total */
+                margin-bottom: 0 !important;
+            }
         }
         
         /* --- AJUSTE DESKTOP (PC) --- */
@@ -1042,9 +1050,15 @@
                         <option value="LOW">Baixa Prioridade</option>
                     </select>
                     
-                    <button class="btn-primary" style="width: 100%; height: 55px; font-size: 1rem; font-weight: 700; background-color: var(--color-primary);" onclick="TaskModule.add()">
-                        Adicionar
-                    </button>
+                    <div id="task-btns-wrapper" style="display: flex; gap: 10px;">
+                        <button id="btn-task-save" class="btn-primary" style="width: 100%; height: 55px; font-size: 1rem; font-weight: 700; background-color: var(--color-primary);" onclick="TaskModule.save()">
+                            Adicionar
+                        </button>
+                        
+                        <button id="btn-task-cancel" class="btn-danger hidden" style="width: 100px; height: 55px; font-size: 1rem; font-weight: 700;" onclick="TaskModule.cancelEdit()">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                    </div>
                 </div>
 
                 <div id="task-list-container"></div>
@@ -1789,9 +1803,11 @@
         }
     };
 
-    // --- 5. TASK MODULE (COM EDIÇÃO) ---
+    // --- 5. TASK MODULE (COM EDIÇÃO COMPLETA) ---
     const TaskModule = {
-        add() {
+        editingIndex: null,
+
+        save() {
             const desc = document.getElementById('task-input').value;
             const date = document.getElementById('task-date').value;
             const time = document.getElementById('task-time').value;
@@ -1799,33 +1815,81 @@
             const freq = document.getElementById('task-freq').value;
 
             if (desc) {
-                DB.state.tasks.push({ desc, date, time, prio, freq, done: false });
+                if (this.editingIndex !== null) {
+                    // --- ATUALIZAR ---
+                    const t = DB.state.tasks[this.editingIndex];
+                    t.desc = desc;
+                    t.date = date;
+                    t.time = time;
+                    t.prio = prio;
+                    t.freq = freq;
+                    
+                    this.cancelEdit(); // Sai do modo edição
+                } else {
+                    // --- CRIAR ---
+                    DB.state.tasks.push({ desc, date, time, prio, freq, done: false });
+                }
+
+                // Limpa campos principais (mantendo data se preferir)
                 document.getElementById('task-input').value = '';
+                document.getElementById('task-time').value = '';
+                
                 DB.save();
+                this.render();
+            } else {
+                alert("Digite a descrição da tarefa.");
             }
         },
-        
-        // --- NOVA FUNÇÃO DE EDITAR ---
+
         edit(index) {
             const task = DB.state.tasks[index];
-            const newDesc = prompt("Editar nome da tarefa:", task.desc);
-            if (newDesc !== null && newDesc.trim() !== "") {
-                task.desc = newDesc;
-                // Opcional: Se quiser editar data também, descomente abaixo:
-                // const newDate = prompt("Nova data (AAAA-MM-DD):", task.date);
-                // if(newDate) task.date = newDate;
-                DB.save();
+            if (task) {
+                this.editingIndex = index;
+
+                // Preenche TODOS os campos
+                document.getElementById('task-input').value = task.desc;
+                document.getElementById('task-date').value = task.date;
+                document.getElementById('task-time').value = task.time;
+                document.getElementById('task-prio').value = task.prio;
+                document.getElementById('task-freq').value = task.freq || 'Geral';
+
+                // Ajusta botões
+                const btnSave = document.getElementById('btn-task-save');
+                btnSave.innerText = 'Salvar Alterações';
+                btnSave.style.backgroundColor = 'var(--color-success)';
+                
+                document.getElementById('btn-task-cancel').classList.remove('hidden');
+
+                // Rola até o formulário
+                document.getElementById('task-input').scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+        },
+
+        cancelEdit() {
+            this.editingIndex = null;
+            document.getElementById('task-input').value = '';
+            document.getElementById('task-time').value = '';
+            
+            const btnSave = document.getElementById('btn-task-save');
+            btnSave.innerText = 'Adicionar';
+            btnSave.style.backgroundColor = 'var(--color-primary)';
+            
+            document.getElementById('btn-task-cancel').classList.add('hidden');
         },
 
         toggle(index) {
             DB.state.tasks[index].done = !DB.state.tasks[index].done;
             DB.save();
+            this.render();
         },
         
         delete(index) {
-            DB.state.tasks.splice(index, 1);
-            DB.save();
+            if(confirm("Excluir tarefa?")) {
+                if (this.editingIndex === index) this.cancelEdit();
+                DB.state.tasks.splice(index, 1);
+                DB.save();
+                this.render();
+            }
         },
 
         exportToCalendar(index) {
@@ -1836,7 +1900,7 @@
                 'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
                 `DTSTART:${start}`, `DTEND:${start}`,
                 `SUMMARY:Caverna: ${t.desc}`, `DESCRIPTION:Prio: ${t.prio}`,
-                'BEGIN:VALARM', 'TRIGGER:-PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Reminder', 'END:VALARM',
+                'BEGIN:VALARM', 'TRIGGER:-PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Lembrete', 'END:VALARM',
                 'END:VEVENT', 'END:VCALENDAR'
             ].join('\n');
             const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
@@ -1851,11 +1915,14 @@
         render() {
             const list = document.getElementById('task-list-container');
             const filter = document.getElementById('task-view-filter').value;
-            
             if(!list) return;
             list.innerHTML = '';
             
-            const sortedTasks = [...DB.state.tasks].sort((a, b) => {
+            // Cria cópia com índice original para ordenação não quebrar edições
+            const sortedTasks = DB.state.tasks.map((t, i) => ({...t, originalIndex: i}));
+            
+            // Ordenação (Prioridade > Hora)
+            sortedTasks.sort((a, b) => {
                 const pWeight = { 'HIGH': 3, 'MED': 2, 'LOW': 1 };
                 if (pWeight[b.prio] !== pWeight[a.prio]) return pWeight[b.prio] - pWeight[a.prio];
                 if (a.time && !b.time) return -1;
@@ -1864,22 +1931,22 @@
                 return 0;
             });
 
+            let hasTask = false;
+
             sortedTasks.forEach((t) => {
-                const originalIndex = DB.state.tasks.indexOf(t);
                 const tarefaFreq = t.freq || 'Geral';
                 if (filter !== 'all' && tarefaFreq !== filter) return;
-
+                
+                hasTask = true;
                 const prioClass = t.prio === 'HIGH' ? 'p-high' : (t.prio === 'MED' ? 'p-med' : 'p-low');
                 const doneStyle = t.done ? 'text-decoration: line-through; opacity: 0.5;' : '';
                 const icon = t.done ? 'fa-check-square' : 'fa-square';
                 const timeHTML = t.time ? `<i class="far fa-clock" style="margin-right:4px;"></i>${t.time}` : '';
-                const calendarBtn = (t.date && t.time && !t.done) 
-                    ? `<i class="fas fa-calendar-plus" onclick="TaskModule.exportToCalendar(${originalIndex})" style="cursor:pointer; color:var(--color-primary); font-size:1.1rem;" title="Agendar"></i>` 
-                    : '';
+                const calendarBtn = (t.date && t.time && !t.done) ? `<i class="fas fa-calendar-plus" onclick="TaskModule.exportToCalendar(${t.originalIndex})" style="cursor:pointer; color:var(--color-primary); font-size:1.1rem;" title="Agendar"></i>` : '';
 
                 list.innerHTML += `
                     <div class="task-item fade-in">
-                        <div style="display:flex; align-items:center; cursor:pointer; flex:1; padding-right:10px;" onclick="TaskModule.toggle(${originalIndex})">
+                        <div style="display:flex; align-items:center; cursor:pointer; flex:1; padding-right:10px;" onclick="TaskModule.toggle(${t.originalIndex})">
                             <i class="far ${icon}" style="margin-right:12px; color:var(--color-primary); font-size:1.4rem;"></i>
                             <div style="width: 100%;">
                                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
@@ -1889,22 +1956,20 @@
                                 <span style="${doneStyle}; display:block; font-weight:500; line-height:1.2;">${t.desc}</span>
                             </div>
                         </div>
-
                         <div class="task-meta-right">
                             <div class="task-date-display">${t.date ? t.date.split('-').reverse().join('/') : ''}</div>
                             <div class="task-time-display">${timeHTML}</div>
-                            
                             <div class="task-actions-row">
                                 ${calendarBtn}
-                                <i class="fas fa-pen" onclick="TaskModule.edit(${originalIndex})" style="cursor:pointer; color:#888; font-size:1rem;" title="Editar"></i>
-                                <i class="fas fa-trash" onclick="TaskModule.delete(${originalIndex})" style="cursor:pointer; color:#666; font-size:1.1rem;"></i>
+                                <i class="fas fa-pen" onclick="TaskModule.edit(${t.originalIndex})" style="cursor:pointer; color:#888; font-size:1rem;" title="Editar"></i>
+                                <i class="fas fa-trash" onclick="TaskModule.delete(${t.originalIndex})" style="cursor:pointer; color:#666; font-size:1.1rem;"></i>
                             </div>
                         </div>
                     </div>
                 `;
             });
 
-            if(list.innerHTML === '') list.innerHTML = '<div class="empty-state">Nenhuma tarefa encontrada.</div>';
+            if(!hasTask) list.innerHTML = '<div class="empty-state">Nenhuma tarefa encontrada.</div>';
         }
     };
 
