@@ -1946,35 +1946,50 @@
         }
     };
 
-    // --- 8. CHARTS MODULE (CORRIGIDO) ---
+    // --- 8. CHARTS MODULE (VERSÃO FINAL: NOMES CURTOS + 3 CORES HÁBITOS + HOME FIX) ---
     const ChartsModule = {
         instances: {},
         
         renderAll() {
-            // Verifica se o container está visível
+            // Verifica se o container está visível para evitar erros de renderização
             const dash = document.getElementById('dashboard');
             if (dash && dash.classList.contains('hidden')) return;
 
-            this.renderRadar(); 
-            this.renderDist(); 
-            this.renderFlow();
-            this.renderHabitPerformance(); 
+            // Renderiza com um pequeno delay para garantir que o CSS aplicou o tamanho
+            setTimeout(() => {
+                this.renderRadar(); 
+                this.renderDist(); 
+                this.renderFlow();
+                this.renderHabitPerformance(); 
+            }, 100);
         },
 
         commonOptions: {
             responsive: true, 
             maintainAspectRatio: false,
-            animation: { duration: 800 }, // Animação um pouco mais rápida
+            animation: { duration: 800 },
             plugins: { legend: { display: false } }
         },
 
+        // 1. GRÁFICO DE ATIVOS (BANCOS) - COM NOMES PERSONALIZADOS
+        // GRÁFICO DE ATIVOS (CORRIGIDO: FONTE MAIOR E SEM NEGRITO)
         renderDist() {
             const ctx = document.getElementById('distChart');
             if (!ctx) return;
             
-            const labels = DB.state.banks.map(b => b.name);
+            // LÓGICA PARA ENCURTAR NOMES
+            const labels = DB.state.banks.map(b => {
+                const n = b.name;
+                if (n.includes('Banco do Brasil')) return 'BB';
+                if (n.includes('Caixa')) return 'Caixa';
+                if (n.includes('Itaú')) return 'Itaú';
+                if (n.includes('BTG')) return 'BTG';
+                return n.substring(0, 12);
+            });
+            
             const values = DB.state.banks.map(b => b.balance);
             
+            // CORES
             const colors = DB.state.banks.map(b => {
                 const n = b.name.toLowerCase();
                 if(n.includes('itaú') || n.includes('itau')) return '#ec7000';
@@ -1987,7 +2002,14 @@
             
             this.instances.dist = new Chart(ctx, { 
                 type: 'doughnut', 
-                data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] }, 
+                data: { 
+                    labels, 
+                    datasets: [{ 
+                        data: values.length ? values : [1], 
+                        backgroundColor: values.length ? colors : ['#333'], 
+                        borderWidth: 0 
+                    }] 
+                }, 
                 options: { 
                     ...this.commonOptions, 
                     cutout: '55%', 
@@ -1995,99 +2017,125 @@
                     plugins: { 
                         legend: { 
                             display: true, 
-                            position: 'bottom', // LEGENDA EM BAIXO
+                            position: 'bottom', 
                             align: 'center',
-                            labels: { color: '#eee', boxWidth: 15, padding: 15, font: { size: 12, weight: 'bold' } } 
-                        } 
+                            labels: { 
+                                color: '#eee', 
+                                boxWidth: 15, 
+                                padding: 20, 
+                                // --- AQUI VOCÊ MEXE NA FONTE ---
+                                font: { 
+                                    size: 16,      // Aumentei o tamanho (era 12)
+                                    weight: 'normal', // Tirei o negrito (era 'bold')
+                                    family: "'Inter', sans-serif"
+                                } 
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw;
+                                    const label = context.label;
+                                    return ` ${label}: R$ ${val.toFixed(2)}`;
+                                }
+                            }
+                        }
                     } 
                 } 
             });
         },
 
+        // 2. GRÁFICO DE HÁBITOS (3 ESTADOS: FEITO, FALHOU, PENDENTE)
         renderHabitPerformance() {
             const ctx = document.getElementById('habitPerformanceChart');
             if (!ctx) return;
-            
-            // Lógica de cálculo (mantida)
+
             const filterEl = document.getElementById('habit-view-filter');
             const currentFilter = filterEl ? filterEl.value : 'all';
             const todayIndex = new Date().getDay();
-            let countDone = 0, countMissed = 0, countPending = 0;
+
+            let countDone = 0;      // Verde
+            let countMissed = 0;    // Vermelho
+            let countPending = 0;   // Cinza
 
             DB.state.habits.forEach(h => {
                 if (currentFilter !== 'all' && h.freq !== currentFilter) return;
+
                 if(h.checks) {
                     h.checks.forEach((isChecked, dayIndex) => {
-                        if (isChecked) countDone++;
-                        else if (dayIndex < todayIndex) countMissed++;
-                        else countPending++;
+                        if (isChecked) {
+                            countDone++;
+                        } else {
+                            if (dayIndex < todayIndex) countMissed++; // Passou o dia
+                            else countPending++; // Hoje ou futuro
+                        }
                     });
                 }
             });
 
             const total = countDone + countMissed + countPending;
             const dataValues = total > 0 ? [countDone, countMissed, countPending] : [0, 0, 1];
+            
+            // Verde, Vermelho, Cinza
             const bgColors = total > 0 ? ['#10b981', '#ef4444', '#333'] : ['#333', '#333', '#333'];
+            const labels = ['Concluído', 'Não Realizado', 'Pendente'];
 
             if (this.instances.habit) this.instances.habit.destroy();
 
             this.instances.habit = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Concluído', 'Não Realizado', 'Pendente'],
-                    datasets: [{ data: dataValues, backgroundColor: bgColors, borderWidth: 0 }]
+                    labels: labels,
+                    datasets: [{
+                        data: dataValues,
+                        backgroundColor: bgColors,
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
                 },
                 options: {
                     ...this.commonOptions,
                     cutout: '70%',
+                    layout: { padding: 0 },
                     plugins: {
-                        legend: { display: true, position: 'right', labels: { color: '#eee', boxWidth: 10 } }
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            align: 'center',
+                            labels: {
+                                color: '#eee',
+                                boxWidth: 12,
+                                padding: 10,
+                                font: { 
+                                    size: 19,      // Aumentei o tamanho (era 12)
+                                    weight: 'normal', // Tirei o negrito (era 'bold')
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        }
                     }
                 }
             });
         },
 
+        // 3. RADAR (MANTIDO IGUAL)
         renderRadar() {
              const ctx = document.getElementById('radarChart'); if (!ctx) return;
-             // Dados fictícios ou reais
-             const tasksDone = DB.state.tasks.filter(t => t.done).length;
-             const totalTasks = DB.state.tasks.length || 1;
-             const score = (tasksDone / totalTasks) * 100;
-
+             const tasksTotal = DB.state.tasks.length || 1; 
+             const tasksDone = DB.state.tasks.filter(t => t.done).length; 
+             const taskScore = (tasksDone / tasksTotal) * 100;
+             const data = { labels: ['Tarefas', 'Hábitos', 'Finanças', 'Estudo', 'Foco'], datasets: [{ label: 'Nível', data: [taskScore, 60, 85, 70, 90], backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444', borderWidth: 1 }] };
              if (this.instances.radar) this.instances.radar.destroy();
-             this.instances.radar = new Chart(ctx, { 
-                 type: 'radar', 
-                 data: { 
-                     labels: ['Tarefas', 'Hábitos', 'Finanças', 'Estudo', 'Foco'], 
-                     datasets: [{ label: 'Nível', data: [score, 60, 85, 70, 90], backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: '#ef4444', borderWidth: 1 }] 
-                 }, 
-                 options: { 
-                     ...this.commonOptions, 
-                     scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false, backdropColor: 'transparent' } } } 
-                 } 
-             });
+             this.instances.radar = new Chart(ctx, { type: 'radar', data, options: { ...this.commonOptions, scales: { r: { grid: { color: 'rgba(255,255,255,0.1)' }, angleLines: { color: 'rgba(255,255,255,0.1)' }, ticks: { display: false, backdropColor: 'transparent' } } } } });
         },
 
+        // 4. FLUXO DE CAIXA (MANTIDO IGUAL)
         renderFlow() {
              const ctx = document.getElementById('flowChart'); if (!ctx) return;
              let income = 0, expense = 0; 
              DB.state.transactions.forEach(t => { if (t.type === 'income') income += t.val; else expense += t.val; });
-             
              if (this.instances.flow) this.instances.flow.destroy();
-             this.instances.flow = new Chart(ctx, { 
-                 type: 'bar', 
-                 data: { 
-                     labels: ['Entradas', 'Saídas'], 
-                     datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] 
-                 }, 
-                 options: { 
-                     ...this.commonOptions, 
-                     scales: { 
-                         y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, 
-                         x: { grid: { display: false }, ticks: { color: '#fff' } } 
-                     } 
-                 } 
-             });
+             this.instances.flow = new Chart(ctx, { type: 'bar', data: { labels: ['Entradas', 'Saídas'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', '#ef4444'], borderRadius: 6, barThickness: 40 }] }, options: { ...this.commonOptions, scales: { y: { beginAtZero: true, grid: { color: '#222' }, ticks: { color: '#666' } }, x: { grid: { display: false }, ticks: { color: '#fff' } } } } });
         }
     };
 
