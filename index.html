@@ -1007,7 +1007,20 @@
             </div>
         </div>
 
-        <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05);">
+        <div id="tarefas" class="view-section hidden fade-in">
+            <div class="card card-centralizado">
+                
+                <div class="card-header" style="justify-content: space-between; margin-bottom: 20px;">
+                    <span class="card-title">BACKLOG DE EXECUÇÃO</span>
+                    <select id="task-view-filter" class="form-control" style="width: auto; height: 35px; padding: 0 15px; font-size: 0.85rem;" onchange="TaskModule.render()">
+                        <option value="all">Todos</option>
+                        <option value="Diário">Diários</option>
+                        <option value="Semanal">Semanais</option>
+                        <option value="Mensal">Mensais</option>
+                    </select>
+                </div>
+                
+                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05);">
                     
                     <input type="text" id="task-input" class="form-control" placeholder="Nova tarefa..." style="margin-bottom: 15px; height: 50px;">
                     
@@ -1029,14 +1042,9 @@
                         <option value="LOW">Baixa Prioridade</option>
                     </select>
                     
-                    <div class="task-btns-row" style="display: flex; gap: 10px;">
-                        <button id="btn-task-save" class="btn-primary" style="width: 100%; height: 55px; font-size: 1rem; font-weight: 700; background-color: var(--color-primary);" onclick="TaskModule.save()">
-                            Adicionar
-                        </button>
-                        <button id="btn-task-cancel" class="btn-danger hidden" style="width: 100px; height: 55px; font-size: 1rem; font-weight: 700;" onclick="TaskModule.cancelEdit()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
+                    <button class="btn-primary" style="width: 100%; height: 55px; font-size: 1rem; font-weight: 700; background-color: var(--color-primary);" onclick="TaskModule.add()">
+                        Adicionar
+                    </button>
                 </div>
 
                 <div id="task-list-container"></div>
