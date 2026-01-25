@@ -1073,39 +1073,42 @@
                     <canvas id="taskPerformanceChart"></canvas>
                 </div>
                 
-                <input type="text" id="task-input" class="form-control" placeholder="Nova tarefa..." style="margin-bottom: 10px;">
-                
-                <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <input type="date" id="task-date" class="form-control" style="margin-bottom: 0; flex: 1;">
-                    <input type="time" id="task-time" class="form-control" style="margin-bottom: 0; width: 90px;">
-                </div>
-
-                <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <select id="task-freq" class="form-control" style="margin-bottom: 0; flex: 1;">
-                        <option value="Geral">Geral</option>
-                        <option value="Diário">Diário</option>
-                        <option value="Semanal">Semanal</option>
-                        <option value="Mensal">Mensal</option>
-                    </select>
+                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05);">
                     
-                    <select id="task-prio" class="form-control" style="margin-bottom: 0; flex: 1;">
-                        <option value="HIGH">Alta</option>
-                        <option value="MED">Média</option>
-                        <option value="LOW">Baixa</option>
-                    </select>
-                </div>
-
-                <div id="task-btns-wrapper" style="display: flex; gap: 10px;">
-                    <button id="btn-task-save" class="btn-primary" style="width: 100%; height: 55px; font-size: 1rem; font-weight: 700; background-color: var(--color-primary); margin-bottom: 0;" onclick="TaskModule.save()">
-                        Adicionar
-                    </button>
+                    <input type="text" id="task-input" class="form-control" placeholder="Nova tarefa..." style="margin-bottom: 15px;">
                     
-                    <button id="btn-task-cancel" class="btn-danger hidden" style="width: 100px; height: 55px; font-size: 1rem; font-weight: 700; margin-bottom: 0;" onclick="TaskModule.cancelEdit()">
-                        <i class="fas fa-times"></i> Cancelar
-                    </button>
-                </div>
+                    <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="date" id="task-date" class="form-control" style="margin-bottom: 0; flex: 1;">
+                        <input type="time" id="task-time" class="form-control" style="margin-bottom: 0; width: 110px;">
+                    </div>
 
-                <div id="task-list-container" style="margin-top: 20px;"></div>
+                    <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <select id="task-freq" class="form-control" style="margin-bottom: 0; flex: 1;">
+                            <option value="Geral">Geral</option>
+                            <option value="Diário">Diário</option>
+                            <option value="Semanal">Semanal</option>
+                            <option value="Mensal">Mensal</option>
+                        </select>
+                        
+                        <select id="task-prio" class="form-control" style="margin-bottom: 0; flex: 1;">
+                            <option value="HIGH">Alta</option>
+                            <option value="MED">Média</option>
+                            <option value="LOW">Baixa</option>
+                        </select>
+                    </div>
+
+                    <div id="task-btns-wrapper" style="display: flex; gap: 10px;">
+                        <button id="btn-task-save" class="btn-primary" style="width: 100%; height: 55px; font-size: 1rem; font-weight: 700; background-color: var(--color-primary); margin-bottom: 0;" onclick="TaskModule.save()">
+                            Adicionar
+                        </button>
+                        
+                        <button id="btn-task-cancel" class="btn-danger hidden" style="width: 100px; height: 55px; font-size: 1rem; font-weight: 700; margin-bottom: 0;" onclick="TaskModule.cancelEdit()">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                    </div>
+
+                </div>
+                <div id="task-list-container"></div>
             </div>
         </div>
 
@@ -1125,20 +1128,24 @@
                     <canvas id="habitPerformanceChart"></canvas>
                 </div>
 
-                <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
-                    <input type="text" id="habit-input" class="form-control" placeholder="Novo hábito..." style="margin-bottom: 0; flex: 2;">
+                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05);">
                     
-                    <select id="habit-freq" class="form-control" style="margin-bottom: 0; width: 130px;">
-                        <option value="Diário">Diário</option>
-                        <option value="Semanal">Semanal</option>
-                        <option value="Mensal">Mensal</option>
-                    </select>
+                    <input type="text" id="habit-input" class="form-control" placeholder="Novo hábito..." style="margin-bottom: 15px;">
                     
-                    <button id="btn-habit-save" class="btn-primary" style="width: auto; min-width: 120px; margin-bottom: 0;" onclick="HabitModule.save()">
-                        Adicionar
-                    </button>
+                    <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 0;">
+                        
+                        <select id="habit-freq" class="form-control" style="margin-bottom: 0; flex: 1;">
+                            <option value="Diário">Diário</option>
+                            <option value="Semanal">Semanal</option>
+                            <option value="Mensal">Mensal</option>
+                        </select>
+                        
+                        <button id="btn-habit-save" class="btn-primary" style="width: auto; flex: 1; margin-bottom: 0;" onclick="HabitModule.save()">
+                            Adicionar
+                        </button>
+                    </div>
+
                 </div>
-                
                 <div id="habit-list-container" class="habit-grid-container"></div>
             </div>
         </div>
