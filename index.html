@@ -2400,9 +2400,18 @@
         },
 
         // GRÁFICOS PADRÃO
-        renderDist() { /* ... código mantido igual ao anterior ... */ 
+       renderDist() { 
             const ctx = document.getElementById('distChart'); if (!ctx) return;
-            const labels = DB.state.banks.map(b => b.name.substring(0, 12));
+            
+            // --- AQUI ESTÁ A MUDANÇA DOS NOMES ---
+            const labels = DB.state.banks.map(b => {
+                const n = b.name.toLowerCase();
+                if(n.includes('caixa')) return 'Caixa';
+                if(n.includes('itau') || n.includes('itaú')) return 'Itaú';
+                if(n.includes('btg')) return 'BTG Pactual';
+                return b.name.substring(0, 12);
+            });
+
             const values = DB.state.banks.map(b => b.balance);
             const colors = DB.state.banks.map(b => {
                 const n = b.name.toLowerCase();
@@ -2480,7 +2489,7 @@
             const dataValues = total > 0 ? [done, missed, pending] : [0, 0, 1];
             const bgColors = total > 0 ? ['#10b981', '#ef4444', '#333'] : ['#333', '#333', '#333'];
             if (this.instances[instanceName]) this.instances[instanceName].destroy();
-            this.instances[instanceName] = new Chart(ctx, { type: 'doughnut', data: { labels: ['Concluído', 'Atrasado/Falta', 'Pendente'], datasets: [{ data: dataValues, backgroundColor: bgColors, borderWidth: 0, hoverOffset: 4 }] }, options: { ...this.commonOptions, cutout: '60%', layout: { padding: 10 }, plugins: { legend: { display: true, position: 'bottom', align: 'center', labels: { color: '#eee', boxWidth: 15, padding: 18, font: { size: 15, weight: 'bold', family: "'Inter', sans-serif" } } } } } });
+            this.instances[instanceName] = new Chart(ctx, { type: 'doughnut', data: { labels: ['Concluído', 'Atrasado/Falta', 'Pendente'], datasets: [{ data: dataValues, backgroundColor: bgColors, borderWidth: 0, hoverOffset: 4 }] }, options: { ...this.commonOptions, cutout: '60%', layout: { padding: 10 }, plugins: { legend: { display: true, position: 'bottom', align: 'center', labels: { color: '#eee', boxWidth: 15, padding: 20, font: { size: 15, weight: 'bold', family: "'Inter', sans-serif" } } } } } });
         },
 
         renderRadar() {
