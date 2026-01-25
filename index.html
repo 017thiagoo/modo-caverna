@@ -1069,41 +1069,36 @@
                     </select>
                 </div>
                 
-                <div style="height: 300px; margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 12px;">
+                <div style="height: 300px; margin-bottom: 25px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 12px;">
                     <canvas id="taskPerformanceChart"></canvas>
                 </div>
                 
-                <div style="background: rgba(255,255,255,0.03); padding: 20px; border-radius: 16px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05);">
+                <input type="text" id="task-input" class="form-control" placeholder="Nova tarefa..." style="margin-bottom: 10px;">
+                
+                <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="date" id="task-date" class="form-control" style="margin-bottom: 0; flex: 1;">
+                    <input type="time" id="task-time" class="form-control" style="margin-bottom: 0; width: 90px;">
                     
-                    <input type="text" id="task-input" class="form-control" placeholder="Nova tarefa..." style="margin-bottom: 15px; height: 50px;">
-                    
-                    <div class="input-group-row" style="display: flex; gap: 10px; margin-bottom: 15px;">
-                        <input type="date" id="task-date" class="form-control" style="margin-bottom: 0; height: 50px;">
-                        <input type="time" id="task-time" class="form-control" style="margin-bottom: 0; height: 50px;">
-                    </div>
-                    
-                    <select id="task-freq" class="form-control" style="margin-bottom: 15px; height: 50px;">
+                    <select id="task-freq" class="form-control" style="margin-bottom: 0; flex: 1;">
                         <option value="Geral">Geral</option>
                         <option value="Diário">Diário</option>
                         <option value="Semanal">Semanal</option>
                         <option value="Mensal">Mensal</option>
                     </select>
                     
-                    <select id="task-prio" class="form-control" style="margin-bottom: 20px; height: 50px;">
-                        <option value="HIGH">Alta Prioridade</option>
-                        <option value="MED">Média Prioridade</option>
-                        <option value="LOW">Baixa Prioridade</option>
+                    <select id="task-prio" class="form-control" style="margin-bottom: 0; flex: 1;">
+                        <option value="HIGH">Alta</option>
+                        <option value="MED">Média</option>
+                        <option value="LOW">Baixa</option>
                     </select>
+
+                    <button id="btn-task-save" class="btn-primary" style="width: auto; padding: 0 25px; margin-bottom: 0;" onclick="TaskModule.save()">
+                        Adicionar
+                    </button>
                     
-                    <div id="task-btns-wrapper" style="display: flex; gap: 10px;">
-                        <button id="btn-task-save" class="btn-primary" style="width: 100%; height: 55px; font-size: 1rem; font-weight: 700; background-color: var(--color-primary);" onclick="TaskModule.save()">
-                            Adicionar
-                        </button>
-                        
-                        <button id="btn-task-cancel" class="btn-danger hidden" style="width: 100px; height: 55px; font-size: 1rem; font-weight: 700;" onclick="TaskModule.cancelEdit()">
-                            <i class="fas fa-times"></i> Cancelar
-                        </button>
-                    </div>
+                    <button id="btn-task-cancel" class="btn-danger hidden" style="width: 50px; margin-bottom: 0;" onclick="TaskModule.cancelEdit()">
+                        <i class="fas fa-times"></i>
+                    </button>
                 </div>
 
                 <div id="task-list-container"></div>
@@ -1885,9 +1880,10 @@
         }
     };
 
-    // --- 5. TASK MODULE (ATUALIZADO COM GRÁFICO) ---
+    // --- 5. TASK MODULE (CORRIGIDO) ---
     const TaskModule = {
-        add() {
+        // CORREÇÃO: Renomeado de 'add' para 'save' para bater com o HTML
+        save() {
             const desc = document.getElementById('task-input').value;
             const date = document.getElementById('task-date').value;
             const time = document.getElementById('task-time').value;
@@ -1895,29 +1891,81 @@
             const freq = document.getElementById('task-freq').value;
 
             if (desc) {
-                DB.state.tasks.push({ desc, date, time, prio, freq, done: false });
+                // Se estiver editando (existe índice), atualiza. Se não, cria novo.
+                // Aqui simplifiquei para salvar novo. A edição complexa exige o índice global.
+                // Para manter simples e funcional igual ao Add:
+                
+                // Verifica se estamos em modo de edição através do botão cancelar visível
+                const btnCancel = document.getElementById('btn-task-cancel');
+                
+                if (!btnCancel.classList.contains('hidden') && this.editingIndex !== undefined && this.editingIndex !== null) {
+                   // Modo Edição
+                   const task = DB.state.tasks[this.editingIndex];
+                   task.desc = desc;
+                   task.date = date;
+                   task.time = time;
+                   task.prio = prio;
+                   task.freq = freq;
+                   this.cancelEdit();
+                } else {
+                   // Modo Criação
+                   DB.state.tasks.push({ desc, date, time, prio, freq, done: false });
+                }
+
                 document.getElementById('task-input').value = '';
+                // Opcional: resetar data/hora ou manter a ultima
                 DB.save();
+                this.render(); // Re-renderiza para atualizar lista e gráfico
+            } else {
+                alert("Digite a descrição da tarefa.");
             }
         },
         
+        // Armazena índice temporário para edição
+        editingIndex: null,
+
         edit(index) {
             const task = DB.state.tasks[index];
-            const newDesc = prompt("Editar nome da tarefa:", task.desc);
-            if (newDesc !== null && newDesc.trim() !== "") {
-                task.desc = newDesc;
-                DB.save();
-            }
+            this.editingIndex = index;
+
+            document.getElementById('task-input').value = task.desc;
+            document.getElementById('task-date').value = task.date;
+            document.getElementById('task-time').value = task.time;
+            document.getElementById('task-prio').value = task.prio;
+            document.getElementById('task-freq').value = task.freq || 'Geral';
+
+            const btnSave = document.getElementById('btn-task-save');
+            btnSave.innerText = 'Salvar';
+            btnSave.style.backgroundColor = 'var(--color-success)';
+            
+            document.getElementById('btn-task-cancel').classList.remove('hidden');
+            document.getElementById('task-input').focus();
+        },
+
+        cancelEdit() {
+            this.editingIndex = null;
+            document.getElementById('task-input').value = '';
+            
+            const btnSave = document.getElementById('btn-task-save');
+            btnSave.innerText = 'Adicionar';
+            btnSave.style.backgroundColor = 'var(--color-primary)';
+            
+            document.getElementById('btn-task-cancel').classList.add('hidden');
         },
 
         toggle(index) {
             DB.state.tasks[index].done = !DB.state.tasks[index].done;
             DB.save();
+            this.render(); // Atualiza gráfico
         },
         
         delete(index) {
-            DB.state.tasks.splice(index, 1);
-            DB.save();
+            if(confirm("Excluir tarefa?")) {
+                if(this.editingIndex === index) this.cancelEdit();
+                DB.state.tasks.splice(index, 1);
+                DB.save();
+                this.render(); // Atualiza gráfico
+            }
         },
 
         exportToCalendar(index) {
@@ -1941,7 +1989,7 @@
         },
         
         render() {
-            // --- ATUALIZA O GRÁFICO AO RENDERIZAR ---
+            // Atualiza o gráfico sempre que renderizar
             if(typeof ChartsModule !== 'undefined') ChartsModule.renderTaskPerformance();
 
             const list = document.getElementById('task-list-container');
@@ -1950,6 +1998,7 @@
             if(!list) return;
             list.innerHTML = '';
             
+            // Ordenação: Prioridade > Hora > Data
             const sortedTasks = [...DB.state.tasks].sort((a, b) => {
                 const pWeight = { 'HIGH': 3, 'MED': 2, 'LOW': 1 };
                 if (pWeight[b.prio] !== pWeight[a.prio]) return pWeight[b.prio] - pWeight[a.prio];
@@ -1968,6 +2017,8 @@
                 const doneStyle = t.done ? 'text-decoration: line-through; opacity: 0.5;' : '';
                 const icon = t.done ? 'fa-check-square' : 'fa-square';
                 const timeHTML = t.time ? `<i class="far fa-clock" style="margin-right:4px;"></i>${t.time}` : '';
+                
+                // Botão de calendário só aparece se tiver data/hora e não estiver feito
                 const calendarBtn = (t.date && t.time && !t.done) 
                     ? `<i class="fas fa-calendar-plus" onclick="TaskModule.exportToCalendar(${originalIndex})" style="cursor:pointer; color:var(--color-primary); font-size:1.1rem;" title="Agendar"></i>` 
                     : '';
