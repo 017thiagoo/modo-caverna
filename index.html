@@ -1880,9 +1880,8 @@
         }
     };
 
-    // --- 5. TASK MODULE (CORRIGIDO) ---
+    // --- 5. TASK MODULE (CORRIGIDO: CHECK IGUAL BIBLIOTECA) ---
     const TaskModule = {
-        // CORREÇÃO: Renomeado de 'add' para 'save' para bater com o HTML
         save() {
             const desc = document.getElementById('task-input').value;
             const date = document.getElementById('task-date').value;
@@ -1891,15 +1890,9 @@
             const freq = document.getElementById('task-freq').value;
 
             if (desc) {
-                // Se estiver editando (existe índice), atualiza. Se não, cria novo.
-                // Aqui simplifiquei para salvar novo. A edição complexa exige o índice global.
-                // Para manter simples e funcional igual ao Add:
-                
-                // Verifica se estamos em modo de edição através do botão cancelar visível
                 const btnCancel = document.getElementById('btn-task-cancel');
                 
                 if (!btnCancel.classList.contains('hidden') && this.editingIndex !== undefined && this.editingIndex !== null) {
-                   // Modo Edição
                    const task = DB.state.tasks[this.editingIndex];
                    task.desc = desc;
                    task.date = date;
@@ -1908,20 +1901,17 @@
                    task.freq = freq;
                    this.cancelEdit();
                 } else {
-                   // Modo Criação
                    DB.state.tasks.push({ desc, date, time, prio, freq, done: false });
                 }
 
                 document.getElementById('task-input').value = '';
-                // Opcional: resetar data/hora ou manter a ultima
                 DB.save();
-                this.render(); // Re-renderiza para atualizar lista e gráfico
+                this.render();
             } else {
                 alert("Digite a descrição da tarefa.");
             }
         },
         
-        // Armazena índice temporário para edição
         editingIndex: null,
 
         edit(index) {
@@ -1956,7 +1946,7 @@
         toggle(index) {
             DB.state.tasks[index].done = !DB.state.tasks[index].done;
             DB.save();
-            this.render(); // Atualiza gráfico
+            this.render(); 
         },
         
         delete(index) {
@@ -1964,7 +1954,7 @@
                 if(this.editingIndex === index) this.cancelEdit();
                 DB.state.tasks.splice(index, 1);
                 DB.save();
-                this.render(); // Atualiza gráfico
+                this.render(); 
             }
         },
 
@@ -1989,7 +1979,6 @@
         },
         
         render() {
-            // Atualiza o gráfico sempre que renderizar
             if(typeof ChartsModule !== 'undefined') ChartsModule.renderTaskPerformance();
 
             const list = document.getElementById('task-list-container');
@@ -1998,7 +1987,6 @@
             if(!list) return;
             list.innerHTML = '';
             
-            // Ordenação: Prioridade > Hora > Data
             const sortedTasks = [...DB.state.tasks].sort((a, b) => {
                 const pWeight = { 'HIGH': 3, 'MED': 2, 'LOW': 1 };
                 if (pWeight[b.prio] !== pWeight[a.prio]) return pWeight[b.prio] - pWeight[a.prio];
@@ -2014,37 +2002,41 @@
                 if (filter !== 'all' && tarefaFreq !== filter) return;
 
                 const prioClass = t.prio === 'HIGH' ? 'p-high' : (t.prio === 'MED' ? 'p-med' : 'p-low');
-                const doneStyle = t.done ? 'text-decoration: line-through; opacity: 0.5;' : '';
-                const icon = t.done ? 'fa-check-square' : 'fa-square';
-                const timeHTML = t.time ? `<i class="far fa-clock" style="margin-right:4px;"></i>${t.time}` : '';
                 
-                // Botão de calendário só aparece se tiver data/hora e não estiver feito
+                // --- LÓGICA DO ÍCONE (IGUAL BIBLIOTECA) ---
+                const checkIcon = t.done ? 'fa-check-circle' : 'fa-circle';
+                const checkColor = t.done ? 'var(--color-success)' : '#444'; // Verde se feito, Cinza se pendente
+                const titleClass = t.done ? 'item-done' : '';
+
+                const timeHTML = t.time ? `<span style="font-family:'JetBrains Mono'; font-size:0.75rem; color:var(--color-primary); margin-left:8px;">${t.time}</span>` : '';
+                const dateHTML = t.date ? `<span style="font-family:'JetBrains Mono'; font-size:0.75rem; color:#888;">${t.date.split('-').reverse().join('/')}</span>` : '';
+                
                 const calendarBtn = (t.date && t.time && !t.done) 
                     ? `<i class="fas fa-calendar-plus" onclick="TaskModule.exportToCalendar(${originalIndex})" style="cursor:pointer; color:var(--color-primary); font-size:1.1rem;" title="Agendar"></i>` 
                     : '';
 
                 list.innerHTML += `
                     <div class="task-item fade-in">
-                        <div style="display:flex; align-items:center; cursor:pointer; flex:1; padding-right:10px;" onclick="TaskModule.toggle(${originalIndex})">
-                            <i class="far ${icon}" style="margin-right:12px; color:var(--color-primary); font-size:1.4rem;"></i>
-                            <div style="width: 100%;">
-                                <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:12px; width:100%;">
+                            
+                            <i class="far ${checkIcon}" onclick="TaskModule.toggle(${originalIndex})" style="cursor:pointer; font-size:1.3rem; min-width:20px; color:${checkColor};"></i>
+
+                            <div style="flex:1;">
+                                <span class="${titleClass}" style="display:block; font-weight:500; font-size: 0.95rem; margin-bottom: 4px;">${t.desc}</span>
+                                
+                                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                     <span class="priority-badge mono ${prioClass}">${t.prio}</span>
                                     <span class="cat-badge" style="margin-left:0; font-size:0.6rem;">${tarefaFreq}</span>
+                                    ${dateHTML}
+                                    ${timeHTML}
                                 </div>
-                                <span style="${doneStyle}; display:block; font-weight:500; line-height:1.2;">${t.desc}</span>
                             </div>
                         </div>
 
-                        <div class="task-meta-right">
-                            <div class="task-date-display">${t.date ? t.date.split('-').reverse().join('/') : ''}</div>
-                            <div class="task-time-display">${timeHTML}</div>
-                            
-                            <div class="task-actions-row">
-                                ${calendarBtn}
-                                <i class="fas fa-pen" onclick="TaskModule.edit(${originalIndex})" style="cursor:pointer; color:#888; font-size:1rem;" title="Editar"></i>
-                                <i class="fas fa-trash" onclick="TaskModule.delete(${originalIndex})" style="cursor:pointer; color:#666; font-size:1.1rem;"></i>
-                            </div>
+                        <div style="display:flex; gap:12px; align-items: center; margin-left: 10px;">
+                            ${calendarBtn}
+                            <i class="fas fa-pen" onclick="TaskModule.edit(${originalIndex})" style="cursor:pointer; color:#888; font-size:0.9rem;" title="Editar"></i>
+                            <i class="fas fa-trash" onclick="TaskModule.delete(${originalIndex})" style="cursor:pointer; color:#666; font-size:1rem;"></i>
                         </div>
                     </div>
                 `;
